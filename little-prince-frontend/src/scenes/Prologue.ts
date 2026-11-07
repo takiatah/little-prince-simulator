@@ -1,8 +1,19 @@
 import Phaser from "phaser";
 
-export class Prologue extends Phaser.Scene {
+export default class Prologue extends Phaser.Scene {
   constructor() {
-    super("Prologue");
+    super("GalaxyMapScene");
+  }
+
+  create() {
+    this.add.text(
+      640,
+      360,
+      "GALAXY MAP - COMING SOON",
+      {
+        fontSize: "32px",
+        color: "#ffffff"
+      }
+    ).setOrigin(0.5);
   }
 }
-

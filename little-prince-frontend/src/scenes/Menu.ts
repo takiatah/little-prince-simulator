@@ -72,7 +72,7 @@ export default class Menu extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
 
     startButton.on("pointerdown", () => {
-      this.scene.start("GalaxyMapScene");
+      this.scene.start("Prologue");
     });
   }
 }
