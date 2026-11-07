@@ -1,6 +1,8 @@
 import Phaser from "phaser";
-import { Menu } from "./scenes/Menu";
 
+import BootScene from "./scenes/BootScene";
+import Menu from "./scenes/Menu";
+import GalaxyMapScene from "./scenes/GalaxyMapScene";
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -8,18 +10,20 @@ const config: Phaser.Types.Core.GameConfig = {
   width: 1280,
   height: 720,
 
-  parent: "game",
+  parent: "game-container",
 
-  backgroundColor: "#10182b",
+  backgroundColor: "#101b32",
+
+  scene: [
+    BootScene,
+    Menu,
+    GalaxyMapScene
+  ],
 
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH
-  },
-
-  scene: [
-    Menu,
-  ]
+  }
 };
 
 new Phaser.Game(config);
