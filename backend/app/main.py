@@ -6,24 +6,37 @@ Then open http://localhost:8000/docs to try the endpoints.
 """
 import json
 import sqlite3
+import time
+import uuid
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from app.game.distance_calc import DistanceCalculator
+from app.game.game_manager import GameManager
+from app.game.planet_service import PLANETS, PlanetService
+from app.game.story_manager import StoryManager
+
 BASE_DIR = Path(__file__).resolve().parent
-STORY_PATH = BASE_DIR / "data" / "story.json"
 DB_PATH = BASE_DIR.parent / "game.db"
 
-# TODO: when story.py is ready, replace this with:
-#   from app.models.story import load_story
-#   STORY = load_story().model_dump(by_alias=True)
-with open(STORY_PATH, encoding="utf-8") as f:
-    STORY: dict[str, Any] = json.load(f)
+story_manager = StoryManager()
+STORY: dict[str, Any] = story_manager.get_story()
+
+# One GameManager per player, kept in memory.
+games: dict[str, GameManager] = {}
+
+planet_service = PlanetService()
+distance_calculator = DistanceCalculator()
+
+# NASA calls are slow, so remember each planet's position for 10 minutes.
+PLANET_CACHE_SECONDS = 600
+_planet_cache: dict[str, tuple[float, dict[str, Any]]] = {}
 
 
 def valid_options(scene_id: str) -> set[str]:
@@ -73,6 +86,19 @@ def init_db() -> None:
 
 init_db()
 
+
+def now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def save_choice_row(player_id: str, scene_id: str, choice_id: str) -> None:
+    with db() as conn:
+        conn.execute(
+            "INSERT INTO choices (player_id, scene_id, choice_id, created_at) VALUES (?, ?, ?, ?)",
+            (player_id, scene_id, choice_id, now()),
+        )
+
+
 app = FastAPI(title="Little Prince Simulator API")
 
 app.add_middleware(
@@ -81,10 +107,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-def now() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 
 class ChoiceIn(BaseModel):
@@ -98,6 +120,18 @@ class ProgressIn(BaseModel):
     scene_id: str = Field(examples=["king_01"])
     variables: dict[str, Any] = Field(default_factory=dict, examples=[{"heart": 2, "roseBond": True}])
     lessons: list[str] = Field(default_factory=list, examples=[["busy_grownups", "responsibility"]])
+
+
+class StartGameIn(BaseModel):
+    player_id: Optional[str] = Field(default=None, examples=[None])
+
+
+class GameChoiceIn(BaseModel):
+    choice_id: str = Field(examples=["listen"])
+
+
+class MinigameIn(BaseModel):
+    outcome_id: str = Field(examples=["complete"])
 
 
 @app.get("/")
@@ -117,11 +151,7 @@ def record_choice(body: ChoiceIn):
         raise HTTPException(
             400, f"'{body.choice_id}' is not a choice in '{body.scene_id}'. Options: {sorted(options)}"
         )
-    with db() as conn:
-        conn.execute(
-            "INSERT INTO choices (player_id, scene_id, choice_id, created_at) VALUES (?, ?, ?, ?)",
-            (body.player_id, body.scene_id, body.choice_id, now()),
-        )
+    save_choice_row(body.player_id, body.scene_id, body.choice_id)
     return {"ok": True}
 
 
@@ -179,3 +209,124 @@ def load_progress(player_id: str):
         "lessons": json.loads(row["lessons"]),
         "updated_at": row["updated_at"],
     }
+
+
+def get_game(player_id: str) -> GameManager:
+    game = games.get(player_id)
+    if game is None:
+        raise HTTPException(404, f"No game for player '{player_id}'. Call POST /game/start first.")
+    return game
+
+
+def run_game_action(action):
+    try:
+        return action()
+    except KeyError as e:
+        raise HTTPException(400, str(e.args[0]) if e.args else "Not found")
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except RuntimeError as e:
+        raise HTTPException(409, str(e))
+
+
+def advance_game(game: GameManager) -> dict[str, Any]:
+    # Uses GameManager.advance() once it exists; until then, does the same thing here.
+    if hasattr(game, "advance"):
+        return game.advance()
+    if game.game_completed:
+        raise RuntimeError("The game has already ended")
+    scene = game.get_current_scene()
+    if scene["type"] != "dialogue":
+        raise ValueError(f"The current scene is a '{scene['type']}' scene, not dialogue")
+    game._enter_scene(scene["next"])
+    return game.get_game_state()
+
+
+def finish_minigame(game: GameManager, outcome_id: str) -> dict[str, Any]:
+    # Uses GameManager.process_minigame() once it exists; until then, does the same thing here.
+    if hasattr(game, "process_minigame"):
+        return game.process_minigame(outcome_id)
+    if game.game_completed:
+        raise RuntimeError("The game has already ended")
+    scene = game.get_current_scene()
+    if scene["type"] != "minigame":
+        raise ValueError(f"The current scene is a '{scene['type']}' scene, not a minigame")
+    outcome = story_manager.get_minigame_outcome(game.current_scene, outcome_id)
+    game._apply_effects(outcome.get("effects", {}))
+    game.minigame_results[game.current_scene] = outcome_id
+    game._enter_scene(outcome["next"])
+    return game.get_game_state()
+
+
+@app.post("/game/start", status_code=201)
+def start_game(body: Optional[StartGameIn] = None):
+    player_id = (body.player_id if body and body.player_id else None) or uuid.uuid4().hex[:12]
+    game = GameManager(story_manager)
+    state = run_game_action(game.start_game)
+    games[player_id] = game
+    return {"player_id": player_id, **state}
+
+
+@app.get("/game/{player_id}")
+def get_game_state(player_id: str):
+    game = get_game(player_id)
+    return {"player_id": player_id, **run_game_action(game.get_game_state)}
+
+
+@app.post("/game/{player_id}/advance")
+def advance(player_id: str):
+    game = get_game(player_id)
+    return {"player_id": player_id, **run_game_action(lambda: advance_game(game))}
+
+
+@app.post("/game/{player_id}/choice")
+def make_choice(player_id: str, body: GameChoiceIn):
+    game = get_game(player_id)
+    scene_id = game.current_scene
+    state = run_game_action(lambda: game.process_choice(body.choice_id))
+    save_choice_row(player_id, scene_id, body.choice_id)
+    return {"player_id": player_id, **state}
+
+
+@app.post("/game/{player_id}/minigame")
+def complete_minigame(player_id: str, body: MinigameIn):
+    game = get_game(player_id)
+    scene_id = game.current_scene
+    state = run_game_action(lambda: finish_minigame(game, body.outcome_id))
+    save_choice_row(player_id, scene_id, body.outcome_id)
+    return {"player_id": player_id, **state}
+
+
+def cached_position(name: str) -> dict[str, Any]:
+    name = name.lower()
+    if name not in PLANETS:
+        raise HTTPException(404, f"Unknown planet '{name}'. Options: {sorted(PLANETS)}")
+    hit = _planet_cache.get(name)
+    if hit and time.time() - hit[0] < PLANET_CACHE_SECONDS:
+        return hit[1]
+    try:
+        position = planet_service.get_planet_position(name)
+    except Exception as e:
+        raise HTTPException(502, f"Could not get {name}'s position from NASA: {e}")
+    _planet_cache[name] = (time.time(), position)
+    return position
+
+
+@app.get("/planets")
+def list_planets():
+    return {"planets": sorted(PLANETS)}
+
+
+@app.get("/planets/distance")
+def planet_distance(
+    from_planet: str = Query(alias="from", examples=["earth"]),
+    to_planet: str = Query(alias="to", examples=["mars"]),
+):
+    a = cached_position(from_planet)
+    b = cached_position(to_planet)
+    return {"from": a["planet"], "to": b["planet"], **distance_calculator.calculate_distance(a, b)}
+
+
+@app.get("/planets/{name}")
+def planet_position(name: str):
+    return cached_position(name)
