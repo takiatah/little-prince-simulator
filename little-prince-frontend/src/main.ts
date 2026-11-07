@@ -2,7 +2,7 @@ import Phaser from "phaser";
 
 import BootScene from "./scenes/BootScene";
 import Menu from "./scenes/Menu";
-import GalaxyMapScene from "./scenes/GalaxyMapScene";
+import Prologue from "./scenes/Prologue";
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -17,7 +17,7 @@ const config: Phaser.Types.Core.GameConfig = {
   scene: [
     BootScene,
     Menu,
-    GalaxyMapScene
+    Prologue
   ],
 
   scale: {
