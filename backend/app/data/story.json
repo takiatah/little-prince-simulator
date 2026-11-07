@@ -54,7 +54,7 @@
       "text": "Owning something is not the same as caring for it. We matter to the things we look after."
     },
     "invisible": {
-      "title": "The Fox's Secret",
+      "title": "The Goose's Secret",
       "text": "The most important things can't be seen with the eyes, only felt with the heart. Time spent together is what makes someone unique to you."
     }
   },
@@ -544,10 +544,14 @@
       "type": "dialogue",
       "unlockLesson": "invisible",
       "lines": [
-        { "speaker": "prince",  "text": "On Earth I met a fox. He asked me to tame him." },
-        { "speaker": "student", "text": "Tame him? What does that mean?" },
+        { "speaker": "prince",  "text": "On my way to you, I met a goose. A big gray one, right outside this building." },
+        { "speaker": "student", "text": "The campus geese? They hiss at everyone." },
+        { "speaker": "prince",  "text": "She hissed at me too, at first. Then she asked me to tame her." },
+        { "speaker": "student", "text": "Tame her? What does that mean?" },
         { "speaker": "prince",  "text": "It's when you spend so much time with someone that they become different from everyone else. They become yours, and you become theirs." },
-        { "speaker": "prince",  "text": "The fox told me a secret: the things that matter most can't be seen with your eyes. You see them with your heart." },
+        { "speaker": "prince",  "text": "So I came back every day at the same time and sat a little closer. Now, of all the geese in the world, she is the only one who is mine." },
+        { "speaker": "prince",  "text": "She told me a secret: the things that matter most can't be seen with your eyes. You see them with your heart." },
+        { "speaker": "prince",  "text": "She also told me why geese fly in a V. Each one makes the wind a little easier for the one behind. Nobody crosses the sky alone." },
         { "speaker": "prince",  "text": "My rose is special because of all the time I gave her. That's what I didn't understand before I left." }
       ],
       "next": "finale_03"
@@ -590,7 +594,7 @@
       "chapter": "finale",
       "type": "dialogue",
       "lines": [
-        { "speaker": "prince",   "text": "Good. They're your fox, I think. And your rose." },
+        { "speaker": "prince",   "text": "Good. They're your flock, I think. And your rose." },
         { "speaker": "narrator", "text": "You turn toward the door. When you look back, the boy is gone." },
         { "speaker": "narrator", "text": "Only a small text file is left open on your desktop: sheep_in_a_box.py." }
       ],
