@@ -228,7 +228,7 @@ export default class SolarSystemScene extends Phaser.Scene {
         "",
         `TO: ${planetNames[this.to]}`,
         "",
-        "REAL DISTANCE:",
+        "DISTANCE:",
         `${distanceAU.toFixed(3)} AU`,
         `${Math.round(distanceKM).toLocaleString("en-US")} km`
     ].join("\n");

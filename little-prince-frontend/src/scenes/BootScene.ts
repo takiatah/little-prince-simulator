@@ -72,6 +72,14 @@ export default class BootScene extends Phaser.Scene {
     );
     this.load.audio("sfx_click", "/assets/audio/click.mp3"
     );
+    this.load.image(
+    "girlWithLaptop",
+    "/assets/characters/girl (2).png"
+    );
+    this.load.image(
+    "davisHall",
+    "/assets/objects/davis-hall.png"
+    );
 
     this.load.audio("music_bg", "/assets/audio/background.mp3"
     );
