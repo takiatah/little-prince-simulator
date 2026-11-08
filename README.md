@@ -331,6 +331,9 @@ Character Sprites
     "Retro rpg pixel art character noble old king shown in multiple views, medieval stories, game animation, npc roles, side view sprite sheets, fantasy worlds, top down 8 bit" by Karolina Under Adobe Stock Standard License  
 
 Object Sprite
+    "Pixel Art, Pixel Desk, Pixel Table, Pixel Furniture, Wooden Desk, Antique Desk, Retro Style, 8-bit Desk, Pixel Wood, Office Object, png" PNGEGG
+    https://www.pngegg.com/en/png-vfgyp
+    
     "Pixel Art Medieval Castle Fortress Illustration with Red Flags and Stone Towers for Video Games" by Hayyin Shalihah Under Adobe Stock Standard License
 
     "Set of pixel art office icons featuring a computer, desk, chair, laptop, printer, and other workspace equipment in a retro 8-bit video game style illustration" by Happy Carrot Under Adobe Stock Standard License
