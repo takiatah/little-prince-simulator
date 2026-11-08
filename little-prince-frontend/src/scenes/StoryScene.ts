@@ -55,8 +55,8 @@ export default class StoryScene extends Phaser.Scene {
       "Loading story...",
       {
         fontSize: "24px",
-        color: "#ffffff",
-        fontFamily: "Georgia",
+        color: "#E0D3B7",
+        fontFamily: "Indie Flower",
       }
     ).setOrigin(0.5);
 
@@ -102,8 +102,8 @@ export default class StoryScene extends Phaser.Scene {
       "PRESS ENTER TO BEGIN",
       {
         fontSize: "22px",
-        color: "#ffffff",
-        fontFamily: "Georgia",
+        color: "#B94126",
+        fontFamily: "Indie Flower",
       }
     )
       .setOrigin(0.5)
