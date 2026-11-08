@@ -46,6 +46,30 @@ export default class BootScene extends Phaser.Scene {
         "rocket",
         "/assets/objects/Rocket.png"
     );
+    this.load.spritesheet(
+    "girl",
+    "/assets/characters/girl.png",
+    {
+        frameWidth: 200/4, 
+        frameHeight: 280/4 
+    }
+    );
+    this.load.image(
+    "laptop",
+    "/assets/objects/laptop.png"
+    );
+    this.load.spritesheet(
+    "businessman",
+    "/assets/characters/!$Lamplighter.png",
+    {
+        frameWidth: 128, 
+        frameHeight: 220/2 
+    }
+    );
+    this.load.image(
+    "castle",
+    "/assets/objects/castle.png"
+    );
   }
 
   create() {

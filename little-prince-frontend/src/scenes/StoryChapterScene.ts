@@ -19,7 +19,10 @@ export default class StoryChapterScene extends Phaser.Scene {
   private planetImage?: Phaser.GameObjects.Image;
   private princeImage?: Phaser.GameObjects.Image;
   private characterImage?: Phaser.GameObjects.Image;
+  private girlImage?: Phaser.GameObjects.Sprite;
+  private laptopImage?: Phaser.GameObjects.Image;
   private introPrompt?: Phaser.GameObjects.Text;
+  private castleImage?: Phaser.GameObjects.Image;
 
   private minigameButtons: Phaser.GameObjects.Text[] = [];
   private introComplete = false;
@@ -166,93 +169,196 @@ export default class StoryChapterScene extends Phaser.Scene {
     });
   }
 
-  private createPlanetVisuals() {
-    const { width, height } = this.scale;
 
-    const planetConfig: Record<
-      PlanetName,
-      {
-        image: string;
-        character: string;
-      }
-    > = {
-      earth: {
-        image: "startingPlanet",
-        character: ""
-      },
-      mars: {
-        image: "planetB612",
-        character: "rose"
-      },
-      venus: {
-        image: "planetKing",
-        character: "king"
-      },
-      jupiter: {
-        image: "planetBusinessman",
-        character: "businessman"
-      }
-    };
+private createPlanetVisuals() {
+  const width = this.scale.width;
+  const height = this.scale.height;
 
-    const config = planetConfig[this.currentPlanet];
+  const planetConfig: Record<
+    PlanetName,
+    { image: string; character: string }
+  > = {
+    earth: {
+      image: "startingPlanet",
+      character: ""
+    },
+    mars: {
+      image: "planetB612",
+      character: "rose"
+    },
+    venus: {
+      image: "planetKing",
+      character: "king"
+    },
+    jupiter: {
+      image: "planetBusinessman",
+      character: "businessman"
+    }
+  };
 
-    this.planetImage = this.add.image(
+  const config = planetConfig[this.currentPlanet];
+
+  // Planet background
+  this.planetImage = this.add.image(
+    width / 2,
+    height / 2 - 40,
+    config.image
+  );
+
+  const scale = Math.min(
+    (width * 0.65) / this.planetImage.width,
+    (height * 0.85) / this.planetImage.height
+  );
+
+  this.planetImage.setScale(scale);
+  this.planetImage.setDepth(-5);
+  this.uiCamera.ignore(this.planetImage);
+
+  const radius = this.planetImage.displayWidth / 2;
+  const characterY = height / 2 - 40 - radius * 0.45;
+
+  // --------------------------------
+  // EARTH: Prince, Girl, and Laptop
+  // --------------------------------
+  if (this.currentPlanet === "earth") {
+    this.princeImage = this.add.sprite(
+      width / 2 - radius * 0.35,
+      characterY,
+      "prince",
+      1
+    );
+
+    this.princeImage.setOrigin(0.5, 1);
+    this.princeImage.setScale(1.2);
+    this.princeImage.setDepth(2);
+    this.uiCamera.ignore(this.princeImage);
+
+    this.girlImage = this.add.sprite(
       width / 2,
-      height / 2 - 40,
-      config.image
+      characterY,
+      "girl",
+      1
     );
 
-    const scale = Math.min(
-      (width * 0.65) / this.planetImage.width,
-      (height * 0.85) / this.planetImage.height
+    this.girlImage.setOrigin(0.5, 1);
+    this.girlImage.setScale(1.5);
+    this.girlImage.setDepth(2);
+    this.uiCamera.ignore(this.girlImage);
+
+    this.laptopImage = this.add.image(
+      width / 2 + radius * 0.15,
+      characterY,
+      "laptop"
     );
 
-    this.planetImage.setScale(scale);
-    this.planetImage.setDepth(-5);
-
-    this.uiCamera.ignore(this.planetImage);
-
-    const radius = this.planetImage.displayWidth / 2;
-
-    // Little Prince.
-    if (this.textures.exists("prince")) {
-      this.princeImage = this.add.image(
-        width / 2 - radius * 0.18,
-        height / 2 - 40 - radius * 0.45,
-        "prince",
-        1
-      );
-
-      this.princeImage.setOrigin(0.5, 1);
-      this.princeImage.setScale(1.2);
-      this.princeImage.setDepth(2);
-
-      this.uiCamera.ignore(this.princeImage);
-    }
-
-    // Rose, King, or Businessman.
-    if (this.textures.exists(config.character)) {
-        this.characterImage = this.add.image(
-            width / 2 + radius * 0.10,
-            height / 2 - 40 - radius * 0.45,
-            config.character
-        );
-
-        this.characterImage.setOrigin(0.5, 1);
-
-        if (config.character === "rose") {
-            // Scale the Rose 
-            this.characterImage.setScale(1.5);
-            
-        } else {
-            this.characterImage.setScale(0.8);
-        }
-
-        this.characterImage.setDepth(2);
-
-        this.uiCamera.ignore(this.characterImage);
-    }
+    this.laptopImage.setOrigin(0.5, 1);
+    this.laptopImage.setScale(1.2);
+    this.laptopImage.setDepth(2);
+    this.uiCamera.ignore(this.laptopImage);
   }
+
+  // --------------------------------
+  // VENUS: Castle, Prince, and King
+  // --------------------------------
+  else if (this.currentPlanet === "venus") {
+    // Castle in the background
+    this.castleImage = this.add.image(
+      width / 2,
+      height / 2 - 300,
+      "castle"
+    );
+
+    this.castleImage.setScale(0.7);
+    this.castleImage.setDepth(-1);
+    this.uiCamera.ignore(this.castleImage);
+
+    // Little Prince
+    this.princeImage = this.add.sprite(
+      width / 2 - radius * 0.18,
+      characterY,
+      "prince",
+      1
+    );
+
+    this.princeImage.setOrigin(0.5, 1);
+    this.princeImage.setScale(1.2);
+    this.princeImage.setDepth(2);
+    this.uiCamera.ignore(this.princeImage);
+
+    // King
+    this.characterImage = this.add.sprite(
+      width / 2 + radius * 0.10,
+      characterY,
+      "king",
+      0
+    );
+
+    this.characterImage.setOrigin(0.5, 1);
+    this.characterImage.setScale(0.8);
+    this.characterImage.setDepth(2);
+    this.uiCamera.ignore(this.characterImage);
+  }
+
+  // --------------------------------
+  // JUPITER: Prince and Businessman
+  // --------------------------------
+  else if (this.currentPlanet === "jupiter") {
+    // Little Prince
+    this.princeImage = this.add.sprite(
+      width / 2 - radius * 0.18,
+      characterY,
+      "prince",
+      1
+    );
+
+    this.princeImage.setOrigin(0.5, 1);
+    this.princeImage.setScale(1.2);
+    this.princeImage.setDepth(2);
+    this.uiCamera.ignore(this.princeImage);
+
+    // Businessman
+    this.characterImage = this.add.sprite(
+      width / 2 + radius * 0.10,
+      characterY,
+      "businessman",
+      0
+    );
+
+    this.characterImage.setOrigin(0.5, 1);
+    this.characterImage.setScale(0.8);
+    this.characterImage.setDepth(2);
+    this.uiCamera.ignore(this.characterImage);
+  }
+
+  // --------------------------------
+  // MARS: Prince and Rose
+  // --------------------------------
+  else if (this.currentPlanet === "mars") {
+    this.princeImage = this.add.sprite(
+      width / 2 - radius * 0.18,
+      characterY,
+      "prince",
+      1
+    );
+
+    this.princeImage.setOrigin(0.5, 1);
+    this.princeImage.setScale(1.2);
+    this.princeImage.setDepth(2);
+    this.uiCamera.ignore(this.princeImage);
+
+    this.characterImage = this.add.image(
+      width / 2 + radius * 0.10,
+      characterY,
+      "rose"
+    );
+
+    this.characterImage.setOrigin(0.5, 1);
+    this.characterImage.setScale(1.5);
+    this.characterImage.setDepth(2);
+    this.uiCamera.ignore(this.characterImage);
+  }
+}
+
 
   private startDialogue() {
     this.dialogue = new DialogueBox(
