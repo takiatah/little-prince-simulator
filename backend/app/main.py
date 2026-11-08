@@ -28,8 +28,8 @@ from app.game.distance_calc import DistanceCalculator
 from app.game.game_manager import GameManager
 from app.game.planet_service import PLANETS, PlanetService
 from app.game.story_manager import StoryManager
-from app.game.trajectory_planner import TrajectoryPlanner
-from app.game.trajectory_generator import TrajectoryGenerator
+from app.game.traj_planner import TrajectoryPlanner
+from app.game.traj_gen import TrajectoryGenerator
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -876,3 +876,64 @@ def calculate_trajectory(body: TrajectoryRequest):
         "departure_state": departure_state,
         "arrival_state": arrival_state,
     }
+
+from datetime import datetime, timedelta, timezone
+from fastapi import HTTPException
+
+@app.get("/trajectory")
+def get_trajectory(
+    from_planet: str,
+    to_planet: str
+):
+    try:
+        # Search for a transfer beginning within the next 30 days
+        departure_start = datetime.now(timezone.utc)
+        departure_end = departure_start + timedelta(days=30)
+
+        transfer = trajectory_planner.find_best_transfer(
+            from_planet=from_planet,
+            to_planet=to_planet,
+            departure_start=departure_start,
+            departure_end=departure_end,
+            flight_duration_min=30,
+            flight_duration_max=500,
+            departure_step_days=5,
+            duration_step_days=10
+        )
+
+        # Retrieve the planet states at the selected dates
+        departure_date = datetime.fromisoformat(
+            transfer["departure_date"]
+        )
+
+        arrival_date = datetime.fromisoformat(
+            transfer["arrival_date"]
+        )
+
+        departure_state = planet_service.get_planet_position(
+            from_planet,
+            departure_date
+        )
+
+        arrival_state = planet_service.get_planet_position(
+            to_planet,
+            arrival_date
+        )
+
+        # Generate the spacecraft's actual trajectory
+        trajectory = trajectory_generator.generate_trajectory(
+            departure_state,
+            arrival_state,
+            transfer
+        )
+
+        return {
+            "transfer": transfer,
+            "trajectory": trajectory
+        }
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail=str(error)
+        )
