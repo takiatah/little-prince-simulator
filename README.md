@@ -180,3 +180,12 @@ Demo players have ids that start with `demo-`, so real players' data is never to
     https://kenney-assets.itch.io/planets
 
 | Audio |
+    Marmixer."Deep SPace Journey".pixabay.Nov 8 2026
+    https://pixabay.com/music/search/game%20background%20stars/
+
+    "click.mp3".pixabay.Nov 8 2026
+    https://pixabay.com/music/search/game%20background%20stars/
+
+| NASA JPL API |
+     NASA JPL.Horizon API.Version 1.3.NASA JPL
+     https://ssd-api.jpl.nasa.gov/doc/horizons.html
