@@ -4,7 +4,9 @@ Little Prince Simulator - backend API.
 
 Run from the backend/ folder:
     uvicorn app.main:app --reload
-Then open http://localhost:8000/docs to try the endpoints.
+
+Then open:
+    http://localhost:8000/docs
 """
 
 import json
@@ -13,10 +15,11 @@ import sqlite3
 import threading
 import time
 import uuid
+
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeout
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -48,19 +51,25 @@ games: dict[str, GameManager] = {}
 planet_service = PlanetService()
 distance_calculator = DistanceCalculator()
 
-# NASA trajectory calculations
 trajectory_planner = TrajectoryPlanner()
 trajectory_generator = TrajectoryGenerator()
 
 
 def valid_options(scene_id: str) -> set[str]:
-    """Choice ids (or minigame outcome keys) a player can pick in a scene."""
+    """Choice IDs or minigame outcomes available in a scene."""
+
     scene = STORY["scenes"].get(scene_id)
 
     if scene is None:
-        raise HTTPException(404, f"Scene '{scene_id}' does not exist")
+        raise HTTPException(
+            404,
+            f"Scene '{scene_id}' does not exist"
+        )
 
-    options = {c["id"] for c in scene.get("choices", [])}
+    options = {
+        choice["id"]
+        for choice in scene.get("choices", [])
+    }
 
     if scene.get("minigame"):
         options |= set(scene["minigame"]["outcomes"])
@@ -117,7 +126,12 @@ def now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def save_choice_row(player_id: str, scene_id: str, choice_id: str) -> None:
+def save_choice_row(
+    player_id: str,
+    scene_id: str,
+    choice_id: str
+) -> None:
+
     with db() as conn:
         conn.execute(
             """
@@ -130,7 +144,8 @@ def save_choice_row(player_id: str, scene_id: str, choice_id: str) -> None:
 
 
 def count_choices(scene_id: str) -> dict[str, Any]:
-    """Counts and percentages for one scene's options."""
+    """Count player choices for a scene."""
+
     options = valid_options(scene_id)
 
     with db() as conn:
@@ -141,10 +156,13 @@ def count_choices(scene_id: str) -> dict[str, Any]:
             WHERE scene_id = ?
             GROUP BY choice_id
             """,
-            (scene_id,),
+            (scene_id,)
         ).fetchall()
 
-    counts = {opt: 0 for opt in sorted(options)}
+    counts = {
+        option: 0
+        for option in sorted(options)
+    }
 
     for row in rows:
         if row["choice_id"] in counts:
@@ -158,7 +176,7 @@ def count_choices(scene_id: str) -> dict[str, Any]:
         "percentages": {
             key: round(100 * value / total) if total else 0
             for key, value in counts.items()
-        },
+        }
     }
 
 
@@ -170,27 +188,54 @@ PLANET_CACHE_SECONDS = 600
 PLANET_RETRY_SECONDS = 60
 NASA_TIMEOUT_SECONDS = 8
 
-_planet_cache: dict[str, tuple[float, dict[str, Any]]] = {}
+_planet_cache: dict[
+    str,
+    tuple[float, dict[str, Any]]
+] = {}
 
 _nasa_pool = ThreadPoolExecutor(max_workers=4)
 
 _ORBITS = {
-    "venus": {"a": 0.72333, "L0": 181.97980, "n": 1.6021302},
-    "earth": {"a": 1.00000, "L0": 100.46457, "n": 0.9856091},
-    "mars": {"a": 1.52371, "L0": -4.55343, "n": 0.5240329},
-    "jupiter": {"a": 5.20289, "L0": 34.39644, "n": 0.0830853},
+    "venus": {
+        "a": 0.72333,
+        "L0": 181.97980,
+        "n": 1.6021302
+    },
+    "earth": {
+        "a": 1.00000,
+        "L0": 100.46457,
+        "n": 0.9856091
+    },
+    "mars": {
+        "a": 1.52371,
+        "L0": -4.55343,
+        "n": 0.5240329
+    },
+    "jupiter": {
+        "a": 5.20289,
+        "L0": 34.39644,
+        "n": 0.0830853
+    }
 }
 
-_J2000 = datetime(2000, 1, 1, 12, tzinfo=timezone.utc)
+_J2000 = datetime(
+    2000,
+    1,
+    1,
+    12,
+    tzinfo=timezone.utc
+)
 
 
 def approximate_position(name: str) -> dict[str, Any]:
-    """Rough position of a planet today, calculated locally."""
-    when = datetime.now(timezone.utc)
+    """Calculate an approximate heliocentric position."""
 
+    when = datetime.now(timezone.utc)
     orbit = _ORBITS[name]
 
-    days = (when - _J2000).total_seconds() / 86400
+    days = (
+        when - _J2000
+    ).total_seconds() / 86400
 
     angle = math.radians(
         (orbit["L0"] + orbit["n"] * days) % 360
@@ -203,12 +248,13 @@ def approximate_position(name: str) -> dict[str, Any]:
         "z": 0.0,
         "unit": "AU",
         "date": when.isoformat(),
-        "source": "approximate",
+        "source": "approximate"
     }
 
 
 def get_position(name: str) -> dict[str, Any]:
-    """A planet's position: NASA if possible, otherwise fallback."""
+    """Get a planet position using NASA or a local fallback."""
+
     name = name.lower()
 
     if name not in PLANETS:
@@ -241,9 +287,9 @@ def get_position(name: str) -> dict[str, Any]:
 
         return position
 
-    except (FutureTimeout, Exception) as e:
+    except Exception as error:
         print(
-            f"[planets] NASA failed for {name}: {e!r}. "
+            f"[planets] NASA failed for {name}: {error!r}. "
             "Using fallback."
         )
 
@@ -262,29 +308,36 @@ def get_position(name: str) -> dict[str, Any]:
 
 
 def warm_planet_cache() -> None:
-    """Ask NASA for every planet in the background at server startup."""
+    """Warm the NASA position cache at startup."""
+
     for name in PLANETS:
         _nasa_pool.submit(get_position, name)
-
-
-threading.Thread(
-    target=warm_planet_cache,
-    daemon=True
-).start()
 
 
 # ================================================================
 # FASTAPI APP
 # ================================================================
 
-app = FastAPI(title="Little Prince Simulator API")
+app = FastAPI(
+    title="Little Prince Simulator API"
+)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=["*"]
 )
+
+
+@app.on_event("startup")
+def startup_event():
+    """Warm planetary positions when the API starts."""
+
+    threading.Thread(
+        target=warm_planet_cache,
+        daemon=True
+    ).start()
 
 
 # ================================================================
@@ -331,7 +384,7 @@ class StartGameIn(BaseModel):
     player_id: Optional[str] = Field(
         default=None,
         examples=[None],
-        description="Leave empty to get a new id"
+        description="Leave empty to get a new ID"
     )
 
 
@@ -347,7 +400,6 @@ class MinigameIn(BaseModel):
     )
 
 
-# Request body for NASA trajectory planning
 class TrajectoryRequest(BaseModel):
     from_planet: str = Field(
         examples=["earth"]
@@ -358,15 +410,12 @@ class TrajectoryRequest(BaseModel):
     )
 
     departure_start: datetime
-
     departure_end: datetime
 
     flight_duration_min: float = 150
-
     flight_duration_max: float = 200
 
     departure_step_days: float = 5
-
     duration_step_days: float = 10
 
 
@@ -379,19 +428,21 @@ def health():
     return {
         "status": "ok",
         "title": STORY["meta"]["title"],
-        "version": STORY["meta"]["version"],
+        "version": STORY["meta"]["version"]
     }
 
 
 @app.get("/story")
 def get_story():
-    """The full story. The frontend loads this once and plays it."""
+    """Return the full story."""
+
     return STORY
 
 
 @app.post("/choice", status_code=201)
 def record_choice(body: ChoiceIn):
-    """Record a choice so it shows up in /stats."""
+    """Record a player choice."""
+
     options = valid_options(body.scene_id)
 
     if body.choice_id not in options:
@@ -412,15 +463,16 @@ def record_choice(body: ChoiceIn):
 
 @app.get("/stats/summary")
 def get_stats_summary():
-    """Percentages for every decision in the game."""
+    """Return choice statistics for every decision."""
+
     decisions = []
 
     for scene_id, scene in STORY["scenes"].items():
 
         if scene["type"] == "choice":
             labels = {
-                c["id"]: c["text"]
-                for c in scene["choices"]
+                choice["id"]: choice["text"]
+                for choice in scene["choices"]
             }
 
         elif (
@@ -446,10 +498,10 @@ def get_stats_summary():
                     "choice_id": choice_id,
                     "text": labels[choice_id],
                     "count": stats["counts"][choice_id],
-                    "percent": stats["percentages"][choice_id],
+                    "percent": stats["percentages"][choice_id]
                 }
                 for choice_id in labels
-            ],
+            ]
         })
 
     return {"decisions": decisions}
@@ -457,7 +509,8 @@ def get_stats_summary():
 
 @app.get("/stats/{scene_id}")
 def get_stats(scene_id: str):
-    """How many players picked each choice in a scene."""
+    """Return choice statistics for one scene."""
+
     if not valid_options(scene_id):
         raise HTTPException(
             400,
@@ -472,7 +525,8 @@ def get_stats(scene_id: str):
 
 @app.post("/progress")
 def save_progress(body: ProgressIn):
-    """Save or overwrite a player's progress."""
+    """Save a player's game progress."""
+
     valid_options(body.scene_id)
 
     with db() as conn:
@@ -492,8 +546,8 @@ def save_progress(body: ProgressIn):
                 body.scene_id,
                 json.dumps(body.variables),
                 json.dumps(body.lessons),
-                now(),
-            ),
+                now()
+            )
         )
 
     return {"ok": True}
@@ -502,6 +556,7 @@ def save_progress(body: ProgressIn):
 @app.get("/progress/{player_id}")
 def load_progress(player_id: str):
     """Load a player's saved progress."""
+
     with db() as conn:
         row = conn.execute(
             "SELECT * FROM progress WHERE player_id = ?",
@@ -519,7 +574,7 @@ def load_progress(player_id: str):
         "scene_id": row["scene_id"],
         "variables": json.loads(row["variables"]),
         "lessons": json.loads(row["lessons"]),
-        "updated_at": row["updated_at"],
+        "updated_at": row["updated_at"]
     }
 
 
@@ -541,25 +596,27 @@ def get_game(player_id: str) -> GameManager:
 
 
 def run_game_action(action):
-    """Turn GameManager errors into clean HTTP errors."""
+    """Convert game errors into HTTP errors."""
+
     try:
         return action()
 
-    except KeyError as e:
+    except KeyError as error:
         raise HTTPException(
             400,
-            str(e.args[0]) if e.args else "Not found"
+            str(error.args[0]) if error.args else "Not found"
         )
 
-    except ValueError as e:
-        raise HTTPException(400, str(e))
+    except ValueError as error:
+        raise HTTPException(400, str(error))
 
-    except RuntimeError as e:
-        raise HTTPException(409, str(e))
+    except RuntimeError as error:
+        raise HTTPException(409, str(error))
 
 
 def advance_game(game: GameManager) -> dict[str, Any]:
-    """Move past a dialogue scene."""
+    """Advance past a dialogue scene."""
+
     if hasattr(game, "advance"):
         return game.advance()
 
@@ -584,7 +641,8 @@ def finish_minigame(
     outcome_id: str
 ) -> dict[str, Any]:
 
-    """Apply a minigame result."""
+    """Apply a minigame outcome."""
+
     if hasattr(game, "process_minigame"):
         return game.process_minigame(outcome_id)
 
@@ -604,7 +662,9 @@ def finish_minigame(
         outcome_id
     )
 
-    game._apply_effects(outcome.get("effects", {}))
+    game._apply_effects(
+        outcome.get("effects", {})
+    )
 
     game.minigame_results[game.current_scene] = outcome_id
 
@@ -616,6 +676,7 @@ def finish_minigame(
 @app.post("/game/start", status_code=201)
 def start_game(body: Optional[StartGameIn] = None):
     """Start a new game."""
+
     player_id = (
         body.player_id
         if body and body.player_id
@@ -636,7 +697,8 @@ def start_game(body: Optional[StartGameIn] = None):
 
 @app.get("/game/{player_id}")
 def get_game_state(player_id: str):
-    """Get the player's current scene and game state."""
+    """Get the player's current game state."""
+
     game = get_game(player_id)
 
     return {
@@ -648,11 +710,14 @@ def get_game_state(player_id: str):
 @app.post("/game/{player_id}/advance")
 def advance(player_id: str):
     """Continue past a dialogue scene."""
+
     game = get_game(player_id)
 
     return {
         "player_id": player_id,
-        **run_game_action(lambda: advance_game(game))
+        **run_game_action(
+            lambda: advance_game(game)
+        )
     }
 
 
@@ -661,9 +726,9 @@ def make_choice(
     player_id: str,
     body: GameChoiceIn
 ):
-    """Pick a choice in a choice scene."""
-    game = get_game(player_id)
+    """Process a choice."""
 
+    game = get_game(player_id)
     scene_id = game.current_scene
 
     state = run_game_action(
@@ -687,9 +752,9 @@ def complete_minigame(
     player_id: str,
     body: MinigameIn
 ):
-    """Report a minigame result."""
-    game = get_game(player_id)
+    """Process a minigame result."""
 
+    game = get_game(player_id)
     scene_id = game.current_scene
 
     state = run_game_action(
@@ -714,7 +779,8 @@ def complete_minigame(
 
 @app.get("/planets")
 def list_planets():
-    """Planets we can look up."""
+    """List supported planets."""
+
     return {
         "planets": sorted(PLANETS)
     }
@@ -722,13 +788,21 @@ def list_planets():
 
 @app.get("/planets/positions")
 def all_planet_positions():
-    """Positions of every planet at once."""
-    names = ["earth", "mars", "venus", "jupiter"]
+    """Return the positions of all four planets."""
+
+    names = [
+        "earth",
+        "mars",
+        "venus",
+        "jupiter"
+    ]
+
+    positions = list(
+        _nasa_pool.map(get_position, names)
+    )
 
     return {
-        "planets": list(
-            _nasa_pool.map(get_position, names)
-        )
+        "planets": positions
     }
 
 
@@ -741,9 +815,10 @@ def planet_distance(
     to_planet: str = Query(
         alias="to",
         examples=["mars"]
-    ),
+    )
 ):
-    """Distance between two planets right now."""
+    """Calculate the current distance between two planets."""
+
     a = get_position(from_planet)
     b = get_position(to_planet)
 
@@ -755,30 +830,28 @@ def planet_distance(
             if a["source"] == b["source"] == "nasa"
             else "approximate"
         ),
-        **distance_calculator.calculate_distance(a, b),
+        **distance_calculator.calculate_distance(a, b)
     }
 
 
 @app.get("/planets/{name}")
 def planet_position(name: str):
-    """A planet's position around the sun right now."""
+    """Get one planet's current position."""
+
     return get_position(name)
 
 
 # ================================================================
-# NASA TRAJECTORY ENDPOINT
+# POST TRAJECTORY ENDPOINT
 # ================================================================
 
 @app.post("/trajectory")
 def calculate_trajectory(body: TrajectoryRequest):
     """
-    Find a low-delta-v transfer between two planets.
-
-    Uses NASA planetary state vectors, Lambert's problem,
-    and numerical trajectory integration.
+    Explicitly calculate a trajectory using supplied dates
+    and transfer search settings.
     """
 
-    # Validate planet names
     from_planet = body.from_planet.lower()
     to_planet = body.to_planet.lower()
 
@@ -807,7 +880,6 @@ def calculate_trajectory(body: TrajectoryRequest):
         )
 
     try:
-        # Step 1: Find the best transfer
         transfer = trajectory_planner.find_best_transfer(
             from_planet=from_planet,
             to_planet=to_planet,
@@ -816,20 +888,9 @@ def calculate_trajectory(body: TrajectoryRequest):
             flight_duration_min=body.flight_duration_min,
             flight_duration_max=body.flight_duration_max,
             departure_step_days=body.departure_step_days,
-            duration_step_days=body.duration_step_days,
+            duration_step_days=body.duration_step_days
         )
 
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-
-    except Exception as e:
-        raise HTTPException(
-            502,
-            f"Transfer planning failed: {e}"
-        )
-
-    try:
-        # Step 2: Retrieve planetary states at departure and arrival
         departure_date = datetime.fromisoformat(
             transfer["departure_date"]
         )
@@ -848,45 +909,247 @@ def calculate_trajectory(body: TrajectoryRequest):
             arrival_date
         )
 
-    except Exception as e:
-        raise HTTPException(
-            502,
-            f"Could not retrieve planetary states: {e}"
-        )
-
-    try:
-        # Step 3: Generate spacecraft trajectory points
         trajectory = trajectory_generator.generate_trajectory(
             departure_state=departure_state,
             arrival_state=arrival_state,
             transfer=transfer,
-            num_points=201,
+            num_points=201
         )
 
-    except Exception as e:
+        return {
+            "transfer": transfer,
+            "trajectory": trajectory,
+            "departure_state": departure_state,
+            "arrival_state": arrival_state
+        }
+
+    except HTTPException:
+        raise
+
+    except ValueError as error:
+        raise HTTPException(400, str(error))
+
+    except Exception as error:
         raise HTTPException(
-            500,
-            f"Trajectory generation failed: {e}"
+            502,
+            f"Transfer planning failed: {error}"
         )
 
-    # Step 4: Return everything needed by the frontend
-    return {
-        "transfer": transfer,
-        "trajectory": trajectory,
-        "departure_state": departure_state,
-        "arrival_state": arrival_state,
-    }
 
-from datetime import datetime, timedelta, timezone
-from fastapi import HTTPException
+# ================================================================
+# GET TRAJECTORY + LIVE PROGRESS
+# ================================================================
+
+trajectory_cache: dict[
+    tuple[str, str],
+    dict[str, Any]
+] = {}
+
+trajectory_progress: dict[
+    tuple[str, str],
+    dict[str, Any]
+] = {}
+
+cached_simulations: set[
+    tuple[str, str]
+] = set()
+
+simulation_lock = threading.Lock()
+
+
+def simulate_cached_progress(
+    cache_key: tuple[str, str],
+    cached_result: dict[str, Any]
+) -> None:
+    """
+    Replay progress for a cached trajectory.
+
+    This does not perform new orbital calculations.
+    """
+
+    transfer = cached_result["transfer"]
+    total_steps = 21
+
+    print(
+        f"Replaying cached trajectory: "
+        f"{cache_key[0]} -> {cache_key[1]}"
+    )
+
+    try:
+        for step in range(total_steps + 1):
+
+            trajectory_progress[cache_key] = {
+                "stage": "searching",
+                "completed": step,
+                "total": total_steps,
+                "departure_date": transfer["departure_date"],
+                "flight_duration_days": transfer["flight_duration_days"],
+                "best_delta_v": (
+                    transfer["total_delta_v"]
+                    if step > 0 else None
+                ),
+                "departure_delta_v": (
+                    transfer["departure_delta_v"]
+                    if step > 0 else None
+                ),
+                "arrival_delta_v": (
+                    transfer["arrival_delta_v"]
+                    if step > 0 else None
+                ),
+                "cached": True
+            }
+
+            time.sleep(0.15)
+
+        trajectory_progress[cache_key] = {
+            "stage": "generating",
+            "completed": total_steps,
+            "total": total_steps,
+            "departure_date": transfer["departure_date"],
+            "flight_duration_days": transfer["flight_duration_days"],
+            "best_delta_v": transfer["total_delta_v"],
+            "departure_delta_v": transfer["departure_delta_v"],
+            "arrival_delta_v": transfer["arrival_delta_v"],
+            "cached": True
+        }
+
+        time.sleep(0.15)
+
+        trajectory_progress[cache_key] = {
+            "stage": "complete",
+            "completed": total_steps,
+            "total": total_steps,
+            "departure_date": transfer["departure_date"],
+            "flight_duration_days": transfer["flight_duration_days"],
+            "best_delta_v": transfer["total_delta_v"],
+            "departure_delta_v": transfer["departure_delta_v"],
+            "arrival_delta_v": transfer["arrival_delta_v"],
+            "cached": True
+        }
+
+        print("Cached trajectory replay complete!")
+
+    except Exception as error:
+        print(
+            f"Cached progress replay failed: {error}"
+        )
+
+        trajectory_progress[cache_key] = {
+            "stage": "error",
+            "message": str(error),
+            "cached": True
+        }
+
+    finally:
+        with simulation_lock:
+            cached_simulations.discard(cache_key)
+
 
 @app.get("/trajectory")
 def get_trajectory(
     from_planet: str,
     to_planet: str
 ):
+    """
+    Return a trajectory for the frontend.
+
+    Cached routes are returned immediately.
+    New routes are calculated with real progress updates.
+    """
+
+    from_planet = from_planet.lower()
+    to_planet = to_planet.lower()
+
+    valid_planets = {
+        "earth",
+        "mars",
+        "venus",
+        "jupiter"
+    }
+
+    if from_planet not in valid_planets:
+        raise HTTPException(
+            400,
+            f"Invalid departure planet: {from_planet}"
+        )
+
+    if to_planet not in valid_planets:
+        raise HTTPException(
+            400,
+            f"Invalid destination planet: {to_planet}"
+        )
+
+    if from_planet == to_planet:
+        raise HTTPException(
+            400,
+            "Departure and destination planets must be different"
+        )
+
+    cache_key = (from_planet, to_planet)
+
+    # --------------------------------------------------
+    # CHECK CACHE
+    # --------------------------------------------------
+
+    if cache_key in trajectory_cache:
+
+        print(
+            f"Using cached trajectory: "
+            f"{from_planet} -> {to_planet}"
+        )
+
+        cached_result = trajectory_cache[cache_key]
+
+        with simulation_lock:
+
+            if cache_key not in cached_simulations:
+
+                cached_simulations.add(cache_key)
+
+                trajectory_progress[cache_key] = {
+                    "stage": "starting",
+                    "completed": 0,
+                    "total": 21,
+                    "departure_date": cached_result["transfer"]["departure_date"],
+                    "flight_duration_days": cached_result["transfer"]["flight_duration_days"],
+                    "best_delta_v": None,
+                    "departure_delta_v": None,
+                    "arrival_delta_v": None,
+                    "cached": True
+                }
+
+                thread = threading.Thread(
+                    target=simulate_cached_progress,
+                    args=(cache_key, cached_result),
+                    daemon=True
+                )
+
+                thread.start()
+
+        return cached_result
+
+    # --------------------------------------------------
+    # CALCULATE NEW TRAJECTORY
+    # --------------------------------------------------
+
+    print(
+        f"Calculating new trajectory: "
+        f"{from_planet} -> {to_planet}"
+    )
+
+    trajectory_progress[cache_key] = {
+        "stage": "starting",
+        "completed": 0,
+        "total": 0,
+        "departure_date": None,
+        "flight_duration_days": None,
+        "best_delta_v": None,
+        "departure_delta_v": None,
+        "arrival_delta_v": None,
+        "cached": False
+    }
+
     try:
-        # Search for a transfer beginning within the next 30 days
         departure_start = datetime.now(timezone.utc)
         departure_end = departure_start + timedelta(days=30)
 
@@ -895,13 +1158,21 @@ def get_trajectory(
             to_planet=to_planet,
             departure_start=departure_start,
             departure_end=departure_end,
-            flight_duration_min=30,
-            flight_duration_max=500,
-            departure_step_days=5,
-            duration_step_days=10
+            flight_duration_min=100,
+            flight_duration_max=400,
+            departure_step_days=15,
+            duration_step_days=50,
+
+            progress_callback=lambda update: trajectory_progress.update({
+                cache_key: {
+                    **update,
+                    "cached": False
+                }
+            })
         )
 
-        # Retrieve the planet states at the selected dates
+        print("Best transfer found!")
+
         departure_date = datetime.fromisoformat(
             transfer["departure_date"]
         )
@@ -920,20 +1191,89 @@ def get_trajectory(
             arrival_date
         )
 
-        # Generate the spacecraft's actual trajectory
+        trajectory_progress[cache_key] = {
+            **trajectory_progress[cache_key],
+            "stage": "generating"
+        }
+
         trajectory = trajectory_generator.generate_trajectory(
-            departure_state,
-            arrival_state,
-            transfer
+            departure_state=departure_state,
+            arrival_state=arrival_state,
+            transfer=transfer,
+            num_points=201
         )
 
-        return {
+        print("Trajectory generated!")
+
+        print(
+            f"Number of points: "
+            f"{trajectory['num_points']}"
+        )
+
+        print(
+            f"Arrival error: "
+            f"{trajectory['arrival_error_au']} AU"
+        )
+
+        result = {
             "transfer": transfer,
             "trajectory": trajectory
         }
 
+        trajectory_cache[cache_key] = result
+
+        trajectory_progress[cache_key] = {
+            "stage": "complete",
+            "completed": 1,
+            "total": 1,
+            "departure_date": transfer["departure_date"],
+            "flight_duration_days": transfer["flight_duration_days"],
+            "best_delta_v": transfer["total_delta_v"],
+            "departure_delta_v": transfer["departure_delta_v"],
+            "arrival_delta_v": transfer["arrival_delta_v"],
+            "cached": False
+        }
+
+        return result
+
     except Exception as error:
+
+        print(
+            f"Trajectory calculation failed: {error}"
+        )
+
+        trajectory_progress[cache_key] = {
+            "stage": "error",
+            "message": str(error),
+            "cached": False
+        }
+
+        if isinstance(error, HTTPException):
+            raise
+
         raise HTTPException(
             status_code=500,
             detail=str(error)
         )
+
+
+# ================================================================
+# TRAJECTORY PROGRESS ENDPOINT
+# ================================================================
+
+@app.get("/trajectory/progress")
+def get_trajectory_progress(
+    from_planet: str,
+    to_planet: str
+):
+    """Return the current progress for a route."""
+
+    cache_key = (
+        from_planet.lower(),
+        to_planet.lower()
+    )
+
+    return trajectory_progress.get(
+        cache_key,
+        {"stage": "waiting"}
+    )
