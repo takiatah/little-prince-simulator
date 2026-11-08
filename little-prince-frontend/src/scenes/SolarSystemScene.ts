@@ -1,4 +1,3 @@
-
 import Phaser from "phaser";
 import GalaxyBackground from "../components/GalaxyBackground";
 
@@ -187,8 +186,8 @@ export default class SolarSystemScene extends Phaser.Scene {
 
   private startProgressPolling() {
     // Wider and taller panel.
-    const panelWidth = Math.min(500, this.scale.width - 50);
-    const panelHeight = 400;
+    const panelWidth = 340;
+    const panelHeight = 480;
 
     const panelX = this.panelMargin;
     const panelY = this.scale.height - panelHeight - this.panelMargin;
@@ -280,8 +279,8 @@ export default class SolarSystemScene extends Phaser.Scene {
   private updateProgressPanel(progress: TrajectoryProgress) {
     if (!this.progressText || !this.progressBar) return;
 
-    const panelWidth = Math.min(500, this.scale.width - 50);
-    const panelHeight = 400;
+    const panelWidth = 340;
+    const panelHeight = 480;
 
     const panelX = this.panelMargin;
     const panelY = this.scale.height - panelHeight - this.panelMargin;
@@ -527,8 +526,8 @@ export default class SolarSystemScene extends Phaser.Scene {
     const distanceKM = distanceAU * 149597870.7;
 
     // Wider and taller travel information panel.
-    const boxWidth = Math.min(500, this.scale.width - 50);
-    const boxHeight = 360;
+    const boxWidth = 340;
+    const boxHeight = 420;
     const margin = 25;
 
     const boxX = this.scale.width - boxWidth - margin;
@@ -578,7 +577,7 @@ export default class SolarSystemScene extends Phaser.Scene {
         fontFamily: "Georgia",
         lineSpacing: 6,
         wordWrap: {
-          width: boxWidth - 50
+          width: boxWidth - 48
         }
       }
     );
