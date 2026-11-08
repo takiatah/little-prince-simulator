@@ -73,10 +73,12 @@ export default class Menu extends Phaser.Scene {
       height / 2 - 1,
       "START JOURNEY",
       {
+        fontFamily: "Indie Flower",
+        fontStyle: "bold",
         fontSize: "22px",
-        color: "#ffffff",
-        backgroundColor: "#50508d",
-        padding: { x: 20, y: 12 }
+        color: "#B94126",
+        backgroundColor: "#a1bb6e",
+        padding: { x: 20, y: 10 }
       }
     )
       .setOrigin(0.5)
