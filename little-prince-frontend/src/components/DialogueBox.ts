@@ -1,3 +1,4 @@
+
 import Phaser from "phaser";
 import type { StoryChoice, StoryLine } from "../managers/StoryManager";
 
@@ -33,6 +34,7 @@ export default class DialogueBox {
       0.94
     )
       .setStrokeStyle(2, 0xe8d5ad)
+      .setScrollFactor(0)
       .setDepth(100);
 
     // Speaker name
@@ -46,7 +48,9 @@ export default class DialogueBox {
         fontFamily: "Georgia",
         fontStyle: "bold"
       }
-    ).setDepth(101);
+    )
+      .setScrollFactor(0)
+      .setDepth(101);
 
     // Dialogue
     this.dialogueText = scene.add.text(
@@ -62,7 +66,9 @@ export default class DialogueBox {
         },
         lineSpacing: 8
       }
-    ).setDepth(101);
+    )
+      .setScrollFactor(0)
+      .setDepth(101);
 
     // Continue button
     this.continueButton = scene.add.text(
@@ -77,12 +83,23 @@ export default class DialogueBox {
       }
     )
       .setOrigin(0.5)
+      .setScrollFactor(0)
       .setInteractive({ useHandCursor: true })
       .setDepth(102);
 
     this.continueButton.on("pointerdown", () => {
       this.onContinue();
     });
+  }
+
+  getGameObjects(): Phaser.GameObjects.GameObject[] {
+    return [
+        this.panel,
+        this.speakerText,
+        this.dialogueText,
+        this.continueButton,
+        ...this.choiceObjects
+    ];
   }
 
   showLine(line: StoryLine, speakerName: string) {
@@ -105,56 +122,61 @@ export default class DialogueBox {
     const horizontal = choices.length > 2;
 
     choices.forEach((choice, index) => {
-        let x: number;
-        let y: number;
+      let x: number;
+      let y: number;
 
-        if (horizontal) {
-            const buttonWidth = Math.min(
-                220,
-                (width - 180 - (choices.length - 1) * 12) / choices.length
-            );
+      if (horizontal) {
+        const buttonWidth = Math.min(
+          220,
+          (width - 180 - (choices.length - 1) * 12) / choices.length
+        );
 
-            const gap = 12;
-            const totalWidth =
-                choices.length * buttonWidth + (choices.length - 1) * gap;
+        const gap = 12;
+        const totalWidth =
+          choices.length * buttonWidth + (choices.length - 1) * gap;
 
-            const startX = (width - totalWidth) / 2;
+        const startX = (width - totalWidth) / 2;
 
-            x = startX + index * (buttonWidth + gap) + buttonWidth / 2;
-            y = height - 85;
-        } else {
-            x = width / 2;
-            y = height - 65 - index * 48;
-        }
+        x = startX + index * (buttonWidth + gap) + buttonWidth / 2;
+        y = height - 85;
+      } else {
+        x = width / 2;
+        y = height - 65 - index * 48;
+      }
 
-        const button = this.scene.add.text(
+      const button = this.scene.add.text(
         x,
         y,
         choice.text,
         {
-            fontSize: "16px",
-            color: "#ffffff",
-            backgroundColor: "#526b83",
-            padding: { x: 14, y: 10 },
-            wordWrap: {
+          fontSize: "16px",
+          color: "#ffffff",
+          backgroundColor: "#526b83",
+          padding: { x: 14, y: 10 },
+          wordWrap: {
             width: horizontal
-                ? Math.min(200, (width - 180) / choices.length)
-                : width - 180
-            },
-            align: "center"
+              ? Math.min(200, (width - 180) / choices.length)
+              : width - 180
+          },
+          align: "center"
         }
-        )
+      )
         .setOrigin(0.5)
+        .setScrollFactor(0)
         .setInteractive({ useHandCursor: true })
         .setDepth(103);
 
-        button.on("pointerdown", () => {
+      // Keep this button off the zooming main camera
+      this.scene.cameras.main.ignore(button);
+              
+      button.on("pointerdown", () => {
         this.clearChoices();
         this.onChoice(choice);
-        });
+      });
 
-        this.choiceObjects.push(button);
+      this.choiceObjects.push(button);
     });
+    
   }
 
   showMessage(message: string) {

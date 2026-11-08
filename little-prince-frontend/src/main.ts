@@ -7,9 +7,6 @@ import StoryScene from "./scenes/StoryScene";
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
 
-  width: 1280,
-  height: 720,
-
   parent: "game-container",
 
   backgroundColor: "#101b32",
@@ -21,8 +18,10 @@ const config: Phaser.Types.Core.GameConfig = {
   ],
 
   scale: {
-    mode: Phaser.Scale.FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH
+    mode: Phaser.Scale.RESIZE,
+    autoCenter: Phaser.Scale.CENTER_BOTH,
+    width: window.innerWidth,
+    height: window.innerHeight
   }
 };
 
