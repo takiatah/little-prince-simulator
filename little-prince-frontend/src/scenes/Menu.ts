@@ -42,15 +42,15 @@ export default class Menu extends Phaser.Scene {
       400,
       0x101b32,
       0.88
-    ).setStrokeStyle(2, 0xe8d5ad);
+    ).setStrokeStyle(2, 0xFFA1BB6E);
 
     // Game title
     this.add.text(
       width / 2,
-      height / 2 - 130,
+      height / 2 - 135,
       "THE",
       {
-        fontSize: "34px",
+        fontSize: "35px",
         color: "#EBD247",
         fontFamily: "Over the Rainbow"
       }
@@ -60,17 +60,50 @@ export default class Menu extends Phaser.Scene {
       height / 2 - 77,
       "LITTLE PRINCE",
       {
-        fontSize: "34px",
+        fontSize: "35px",
         color: "#EBD247",
         fontFamily: "Over the Rainbow"
       }
     ).setOrigin(0.5);
 
+    //UB HACKING PROJECT
+    this.add.text(
+      width / 2,
+      height /  2- 5,
+      "A 2026 UB HACKING PROJECT",
+      {
+        fontSize: "14px",
+        color: "#dad19d",
+        fontFamily: "Indie Flower"
+      }
+    ).setOrigin(0.5);
+    this.add.text(
+      width / 2,
+      height /  1- 305,
+      "Inspired by The Little Prince",
+      {
+        fontSize: "14px",
+        color: "#dad19d",
+        fontFamily: "Indie Flower"
+      }
+    ).setOrigin(0.5);
+
+    //divider
+        this.add.text(
+      width / 2,
+      height / 2-50,
+      "___________________",
+      {
+        fontSize: "27px",
+        color: "#4e737d ",
+        fontFamily: "Georgia"
+      }
+    ).setOrigin(0.5);
 
     // Start button
     const startButton = this.add.text(
       width / 2,
-      height / 2 - 1,
+      height / 1 -195,
       "START JOURNEY",
       {
         fontFamily: "Indie Flower",
