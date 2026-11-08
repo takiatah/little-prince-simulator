@@ -49,6 +49,169 @@ little-prince-simulator/
 
 You need **Python 3.11+** and **Node.js 18+**. Use two terminals.
 
+
+## Little Prince Simulator – Setup & Running Instructions
+
+1. Project Overview
+The Little Prince Simulator is a 2D story-based decision game built with:
+- Frontend: Phaser 3, TypeScript, and Vite
+- Backend: Python and FastAPI
+- Database: SQLite
+- Story Data: JSON (backend/app/data/story.json)
+The frontend communicates with the backend to retrieve story data, record player choices, and save player progress.
+
+2. Prerequisites
+- Before running the project, make sure you have
+- installed:
+- Node.js (includes npm)
+- Python 3.10 or later
+- Git
+- A code editor such as Visual Studio Code
+You should also have access to the team's GitHub repository.
+
+3. Clone the Repository
+Open a terminal and navigate to the folder where you want to store the project.
+Run:
+```
+git clone YOUR_REPOSITORY_URL
+```
+
+Navigate into the project:
+```
+cd YOUR_PROJECT_FOLDER
+```
+
+Open the project in VS Code:
+```
+code .
+```
+
+4. Set Up the Backend
+The backend uses FastAPI to serve the story data and manage player information.
+**Step 1: Navigate to the backend folder**
+```
+cd backend
+```
+
+**Step 2: Create a Python virtual environment**
+*Windows:*
+```
+python -m venv .venv
+.venv\Scripts\activate
+```
+
+*macOS/Linux:*
+```
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+*Step 3: Install dependencies*
+```
+pip install -r requirements.txt
+```
+
+*Step 4: Start the backend server*
+Run:
+```
+uvicorn app.main:app --reload
+```
+The backend should now be running at:
+http://localhost:8000
+
+*Step 5: Verify the backend*
+Open these URLs in your browser:
+- http://localhost:8000/ – Backend health check
+- http://localhost:8000/story – Retrieves the story JSON
+- http://localhost:8000/docs – FastAPI interactive API documentation
+Keep this terminal open while playing the game.
+
+5. Set Up the Frontend
+The frontend uses Phaser and TypeScript to display the game, characters, planets, dialogue, and player choices.
+**Step 1: Open a second terminal**
+Keep the backend terminal running. Open another terminal in VS Code.
+Navigate to the frontend folder:
+```
+cd frontend
+```
+If your folder is named little-prince-frontend, use that folder name instead.
+**Step 2: Install dependencies**
+Run:
+```
+npm install
+```
+This installs the packages listed in package.json, including Phaser and Vite.
+**Step 3: Start the frontend**
+Run:
+```
+npm run dev
+```
+Vite will display a local development URL, usually:
+http://localhost:5173
+Open that URL in your browser to play the game.
+Keep this terminal open as well.
+
+6. Running the Game
+You need two terminals running simultaneously:
+| **Terminal** | **Directory** | **Command** |
+| --- | --- | --- |
+| Terminal 1 | backend/ | uvicorn app.main:app --reload |
+| --- | --- | --- |
+| Terminal 2 | frontend/ | npm run dev |
+
+Once both servers are running:
+    1. Open http://localhost:5173.
+    2. Start the game from the main menu.
+    3. The frontend retrieves the story from the FastAPI backend.
+    4. Play through the dialogue and make choices.
+**Important:** Start the backend before launching the game so the frontend can successfully retrieve the story.
+
+7. Common Issues
+**Backend: uvicorn is not recognized**
+Make sure your Python virtual environment is activated and dependencies are installed.
+You can also run:
+```
+python -m uvicorn app.main:app --reload
+```
+
+**Backend: ModuleNotFoundError**
+Make sure you are running the backend command from the backend/ directory and have installed the dependencies:
+```
+pip install -r requirements.txt
+```
+
+**Frontend: npm is not recognized**
+Make sure Node.js is installed. Restart your terminal after installation.
+
+**Frontend: Could not load story**
+Check that:
+    1. The backend is running.
+    2. http://localhost:8000/story opens successfully.
+    3. The frontend fetch URL points to:
+```
+fetch("http://localhost:8000/story");
+```
+
+**Frontend: Images or assets are missing**
+Make sure the assets are located in the frontend's public/assets/ directory and that the paths used in Phaser match the actual filenames.
+#### Quick Start (After Initial Setup)
+Every time you want to run the game:
+**Terminal 1 – Backend:**
+```
+cd backend
+.venv\Scripts\activate
+uvicorn app.main:app --reload
+```
+
+**Terminal 2 – Frontend:**
+```
+cd frontend
+npm run dev
+```
+Then open http://localhost:5173 in your browser.
+*Note: The frontend directory name and repository URL in these instructions should match the actual names used in the team's GitHub repository.*
+
+
 ### 1. Backend (terminal 1)
 
 ```bash
