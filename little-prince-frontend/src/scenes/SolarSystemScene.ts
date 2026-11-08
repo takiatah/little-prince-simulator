@@ -1,3 +1,4 @@
+
 import Phaser from "phaser";
 import GalaxyBackground from "../components/GalaxyBackground";
 
@@ -57,6 +58,7 @@ interface TrajectoryResponse {
 }
 
 interface TrajectoryProgress {
+  run_id?: string;
   stage: string;
   completed: number;
   total: number;
@@ -89,6 +91,11 @@ export default class SolarSystemScene extends Phaser.Scene {
   private progressPanel?: Phaser.GameObjects.Rectangle;
 
   private isFetchingProgress = false;
+
+  // Identifies the current scene run.
+  // Prevents old asynchronous requests from updating a new scene.
+  private progressRequestVersion = 0;
+
   private loadingText?: Phaser.GameObjects.Text;
 
   // Panel dimensions.
@@ -105,6 +112,11 @@ export default class SolarSystemScene extends Phaser.Scene {
   // ================================================================
 
   create(data: TravelData) {
+    // Invalidate any requests from a previous scene run.
+    this.progressRequestVersion++;
+
+    this.stopProgressPolling(true);
+
     this.from = data?.from ?? "earth";
     this.to = data?.to ?? "mars";
 
@@ -125,7 +137,7 @@ export default class SolarSystemScene extends Phaser.Scene {
       }
     ).setOrigin(0.5);
 
-    this.loadPlanetPositions();
+    void this.loadPlanetPositions();
   }
 
   // ================================================================
@@ -179,12 +191,19 @@ export default class SolarSystemScene extends Phaser.Scene {
       );
 
       if (!trajectoryResponse.ok) {
-        const errorData = await trajectoryResponse.json();
+        let errorMessage =
+          "Could not calculate the orbital transfer.";
 
-        throw new Error(
-          errorData.detail ??
-          "Could not calculate the orbital transfer."
-        );
+        try {
+          const errorData = await trajectoryResponse.json();
+
+          errorMessage =
+            errorData.detail ?? errorMessage;
+        } catch {
+          // Keep the default error message.
+        }
+
+        throw new Error(errorMessage);
       }
 
       const trajectoryData: TrajectoryResponse =
@@ -211,9 +230,8 @@ export default class SolarSystemScene extends Phaser.Scene {
         trajectoryData.trajectory.arrival_error_au
       );
 
-      // Do NOT stop progress polling here.
-      // A cached trajectory returns immediately, but its
-      // progress replay continues in the background.
+      // Do not stop polling here.
+      // Cached trajectory progress continues in the background.
 
       // --------------------------------------------------
       // ANIMATE ROCKET
@@ -263,6 +281,9 @@ export default class SolarSystemScene extends Phaser.Scene {
   // ================================================================
 
   private startProgressPolling() {
+    // Remove any existing panel and timer.
+    this.stopProgressPolling(true);
+
     const panelWidth = this.progressPanelWidth;
     const panelHeight = this.progressPanelHeight;
 
@@ -317,16 +338,23 @@ export default class SolarSystemScene extends Phaser.Scene {
     this.progressBar.setScrollFactor(0);
     this.progressBar.setDepth(1001);
 
-    // Poll the backend every 500 milliseconds.
+    // Capture this scene run.
+    const requestVersion = this.progressRequestVersion;
+
+    // Poll every 500 milliseconds.
+    // The first poll happens after the backend has received
+    // the trajectory request.
     this.progressEvent = this.time.addEvent({
       delay: 500,
       loop: true,
       callback: () => {
+        if (requestVersion !== this.progressRequestVersion) {
+          return;
+        }
+
         void this.fetchTrajectoryProgress();
       }
     });
-
-    void this.fetchTrajectoryProgress();
   }
 
   // ================================================================
@@ -337,6 +365,8 @@ export default class SolarSystemScene extends Phaser.Scene {
     if (this.isFetchingProgress) return;
 
     this.isFetchingProgress = true;
+
+    const requestVersion = this.progressRequestVersion;
 
     try {
       const response = await fetch(
@@ -352,9 +382,14 @@ export default class SolarSystemScene extends Phaser.Scene {
       const progress: TrajectoryProgress =
         await response.json();
 
+      // Ignore responses from an older scene run.
+      if (requestVersion !== this.progressRequestVersion) {
+        return;
+      }
+
       this.updateProgressPanel(progress);
 
-      // Stop polling only when the backend has finished.
+      // Stop polling only when the current run finishes.
       if (
         progress.stage === "complete" ||
         progress.stage === "error"
@@ -363,10 +398,12 @@ export default class SolarSystemScene extends Phaser.Scene {
       }
 
     } catch (error) {
-      console.error(
-        "Progress polling error:",
-        error
-      );
+      if (requestVersion === this.progressRequestVersion) {
+        console.error(
+          "Progress polling error:",
+          error
+        );
+      }
 
     } finally {
       this.isFetchingProgress = false;
@@ -401,8 +438,11 @@ export default class SolarSystemScene extends Phaser.Scene {
     const percentage = progress.total > 0
       ? Math.min(
           100,
-          Math.round(
-            (progress.completed / progress.total) * 100
+          Math.max(
+            0,
+            Math.round(
+              (progress.completed / progress.total) * 100
+            )
           )
         )
       : 0;
@@ -426,7 +466,8 @@ export default class SolarSystemScene extends Phaser.Scene {
     // STATUS
     // --------------------------------------------------
 
-    let status = "Searching for efficient orbital transfers...";
+    let status =
+      "Searching for efficient orbital transfers...";
 
     if (progress.cached) {
       if (progress.stage === "complete") {
@@ -444,7 +485,8 @@ export default class SolarSystemScene extends Phaser.Scene {
       status = "Evaluating possible orbital transfers...";
 
     } else if (progress.stage === "generating") {
-      status = "Best transfer found! Generating trajectory...";
+      status =
+        "Best transfer found! Generating trajectory...";
 
     } else if (progress.stage === "complete") {
       status = "Orbital calculations complete!";
@@ -940,8 +982,7 @@ export default class SolarSystemScene extends Phaser.Scene {
         },
 
         onComplete: () => {
-          // Stop polling and clean up the progress panel
-          // before moving to the next scene.
+          // Stop polling and clean up the progress panel.
           this.stopProgressPolling(true);
 
           if (this.to === "earth") {
