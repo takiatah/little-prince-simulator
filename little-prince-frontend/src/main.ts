@@ -3,6 +3,9 @@ import Phaser from "phaser";
 import BootScene from "./scenes/BootScene";
 import Menu from "./scenes/Menu";
 import StoryScene from "./scenes/StoryScene";
+import DavisScene from "./scenes/DavisScene";
+import SolarSystemScene from "./scenes/SolarSystemScene";
+import PlanetScene from "./scenes/PlanetScene";
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -14,7 +17,10 @@ const config: Phaser.Types.Core.GameConfig = {
   scene: [
     BootScene,
     Menu,
-    StoryScene
+    StoryScene,
+    DavisScene,
+    SolarSystemScene,
+    PlanetScene
   ],
 
   scale: {

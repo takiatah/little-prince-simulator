@@ -326,6 +326,16 @@ def planet_distance(
     b = cached_position(to_planet)
     return {"from": a["planet"], "to": b["planet"], **distance_calculator.calculate_distance(a, b)}
 
+@app.get("/planets/positions")
+def all_planet_positions():
+    positions = [
+        cached_position(name)
+        for name in ["earth", "mars", "venus", "jupiter"]
+    ]
+
+    return {
+        "planets": positions
+    }
 
 @app.get("/planets/{name}")
 def planet_position(name: str):

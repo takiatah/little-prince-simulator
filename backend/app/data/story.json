@@ -20,7 +20,7 @@
   },
 
   "speakers": {
-    "narrator":    { "name": "",                  "sprite": null },
+    "narrator":    { "name": "Narrator",          "sprite": null },
     "student":     { "name": "You",               "sprite": "student" },
     "prince":      { "name": "The Little Prince", "sprite": "prince" },
     "rose":        { "name": "The Rose",          "sprite": "rose" },
