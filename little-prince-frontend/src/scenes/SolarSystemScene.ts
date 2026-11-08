@@ -76,6 +76,8 @@ interface TrajectoryProgress {
 // ================================================================
 
 export default class SolarSystemScene extends Phaser.Scene {
+  private readonly API_URL = "http://localhost:8000";
+
   private planetPositions: Map<
     PlanetName,
     Phaser.Math.Vector2
@@ -91,10 +93,8 @@ export default class SolarSystemScene extends Phaser.Scene {
   private progressPanel?: Phaser.GameObjects.Rectangle;
 
   private isFetchingProgress = false;
-
-  // Identifies the current scene run.
-  // Prevents old asynchronous requests from updating a new scene.
   private progressRequestVersion = 0;
+  private trajectoryComplete = false;
 
   private loadingText?: Phaser.GameObjects.Text;
 
@@ -112,7 +112,6 @@ export default class SolarSystemScene extends Phaser.Scene {
   // ================================================================
 
   create(data: TravelData) {
-    // Invalidate any requests from a previous scene run.
     this.progressRequestVersion++;
 
     this.stopProgressPolling(true);
@@ -122,6 +121,10 @@ export default class SolarSystemScene extends Phaser.Scene {
 
     this.planetPositions.clear();
     this.isFetchingProgress = false;
+    this.trajectoryComplete = false;
+
+    this.loadingText?.destroy();
+    this.loadingText = undefined;
 
     new GalaxyBackground(this).create();
 
@@ -145,13 +148,15 @@ export default class SolarSystemScene extends Phaser.Scene {
   // ================================================================
 
   private async loadPlanetPositions() {
+    const requestVersion = this.progressRequestVersion;
+
     try {
       // --------------------------------------------------
       // LOAD PLANET POSITIONS
       // --------------------------------------------------
 
       const response = await fetch(
-        "http://localhost:8000/planets/positions"
+        `${this.API_URL}/planets/positions`
       );
 
       if (!response.ok) {
@@ -163,6 +168,10 @@ export default class SolarSystemScene extends Phaser.Scene {
       const data: {
         planets: PlanetPosition[];
       } = await response.json();
+
+      if (requestVersion !== this.progressRequestVersion) {
+        return;
+      }
 
       if (!data.planets || data.planets.length === 0) {
         throw new Error(
@@ -177,7 +186,7 @@ export default class SolarSystemScene extends Phaser.Scene {
       );
 
       // --------------------------------------------------
-      // START PROGRESS POLLING
+      // CREATE PROGRESS PANEL
       // --------------------------------------------------
 
       this.startProgressPolling();
@@ -187,8 +196,12 @@ export default class SolarSystemScene extends Phaser.Scene {
       // --------------------------------------------------
 
       const trajectoryResponse = await fetch(
-        `http://localhost:8000/trajectory?from_planet=${this.from}&to_planet=${this.to}`
+        `${this.API_URL}/trajectory?from_planet=${this.from}&to_planet=${this.to}`
       );
+
+      if (requestVersion !== this.progressRequestVersion) {
+        return;
+      }
 
       if (!trajectoryResponse.ok) {
         let errorMessage =
@@ -196,9 +209,7 @@ export default class SolarSystemScene extends Phaser.Scene {
 
         try {
           const errorData = await trajectoryResponse.json();
-
-          errorMessage =
-            errorData.detail ?? errorMessage;
+          errorMessage = errorData.detail ?? errorMessage;
         } catch {
           // Keep the default error message.
         }
@@ -209,6 +220,10 @@ export default class SolarSystemScene extends Phaser.Scene {
       const trajectoryData: TrajectoryResponse =
         await trajectoryResponse.json();
 
+      if (requestVersion !== this.progressRequestVersion) {
+        return;
+      }
+
       const points = trajectoryData.trajectory?.points;
 
       if (!points || points.length < 2) {
@@ -218,11 +233,40 @@ export default class SolarSystemScene extends Phaser.Scene {
       }
 
       // --------------------------------------------------
-      // DISPLAY TRAVEL INFORMATION
+      // KEEP TRAVEL DATA READY
+      // --------------------------------------------------
+
+      // Do not display the travel information yet.
+      // Wait until the progress calculation is complete.
+
+      this.loadingText?.setText(
+        "Calculating the best route through the solar system..."
+      );
+
+      // --------------------------------------------------
+      // WAIT FOR PROGRESS TO COMPLETE
+      // --------------------------------------------------
+
+      await this.waitForProgressToComplete(requestVersion);
+
+      if (requestVersion !== this.progressRequestVersion) {
+        return;
+      }
+
+      if (!this.sys.isActive()) {
+        return;
+      }
+
+      // --------------------------------------------------
+      // REMOVE LOADING TEXT
       // --------------------------------------------------
 
       this.loadingText?.destroy();
       this.loadingText = undefined;
+
+      // --------------------------------------------------
+      // DISPLAY TRAVEL INFORMATION
+      // --------------------------------------------------
 
       this.drawTravelInfo(
         data.planets,
@@ -230,16 +274,17 @@ export default class SolarSystemScene extends Phaser.Scene {
         trajectoryData.trajectory.arrival_error_au
       );
 
-      // Do not stop polling here.
-      // Cached trajectory progress continues in the background.
-
       // --------------------------------------------------
-      // ANIMATE ROCKET
+      // LAUNCH ROCKET
       // --------------------------------------------------
 
       this.animateRocket(points);
 
     } catch (error) {
+      if (requestVersion !== this.progressRequestVersion) {
+        return;
+      }
+
       console.error(
         "Solar system error:",
         error
@@ -277,11 +322,69 @@ export default class SolarSystemScene extends Phaser.Scene {
   }
 
   // ================================================================
+  // WAIT FOR PROGRESS COMPLETION
+  // ================================================================
+
+  private async waitForProgressToComplete(
+    requestVersion: number
+  ): Promise<void> {
+    while (
+      requestVersion === this.progressRequestVersion &&
+      this.sys.isActive()
+    ) {
+      const response = await fetch(
+        `${this.API_URL}/trajectory/progress?from_planet=${this.from}&to_planet=${this.to}`
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          "Could not retrieve trajectory progress."
+        );
+      }
+
+      const progress: TrajectoryProgress =
+        await response.json();
+
+      if (requestVersion !== this.progressRequestVersion) {
+        return;
+      }
+
+      this.updateProgressPanel(progress);
+
+      // Only continue when the backend confirms completion.
+      if (progress.stage === "complete") {
+        this.trajectoryComplete = true;
+
+        // Force the bar to display 100%.
+        this.updateProgressPanel({
+          ...progress,
+          completed: progress.total,
+          total: progress.total
+        });
+
+        this.stopProgressPolling(false);
+
+        return;
+      }
+
+      if (progress.stage === "error") {
+        throw new Error(
+          progress.message ?? "Orbital calculation failed."
+        );
+      }
+
+      // Keep checking while the calculation is running.
+      await new Promise<void>(resolve => {
+        this.time.delayedCall(300, () => resolve());
+      });
+    }
+  }
+
+  // ================================================================
   // LIVE ORBITAL CALCULATION PANEL
   // ================================================================
 
   private startProgressPolling() {
-    // Remove any existing panel and timer.
     this.stopProgressPolling(true);
 
     const panelWidth = this.progressPanelWidth;
@@ -291,7 +394,6 @@ export default class SolarSystemScene extends Phaser.Scene {
     const panelY =
       this.scale.height - panelHeight - this.panelMargin;
 
-    // Panel background.
     this.progressPanel = this.add.rectangle(
       panelX,
       panelY,
@@ -302,14 +404,10 @@ export default class SolarSystemScene extends Phaser.Scene {
     );
 
     this.progressPanel.setOrigin(0, 0);
-    this.progressPanel.setStrokeStyle(
-      2,
-      0xe8d5ad
-    );
+    this.progressPanel.setStrokeStyle(2, 0xe8d5ad);
     this.progressPanel.setScrollFactor(0);
     this.progressPanel.setDepth(1000);
 
-    // Progress information.
     this.progressText = this.add.text(
       panelX + 24,
       panelY + 22,
@@ -332,23 +430,20 @@ export default class SolarSystemScene extends Phaser.Scene {
     this.progressText.setScrollFactor(0);
     this.progressText.setDepth(1002);
 
-    // Progress bar.
     this.progressBar = this.add.graphics();
-
     this.progressBar.setScrollFactor(0);
     this.progressBar.setDepth(1001);
 
-    // Capture this scene run.
     const requestVersion = this.progressRequestVersion;
 
-    // Poll every 500 milliseconds.
-    // The first poll happens after the backend has received
-    // the trajectory request.
     this.progressEvent = this.time.addEvent({
       delay: 500,
       loop: true,
       callback: () => {
-        if (requestVersion !== this.progressRequestVersion) {
+        if (
+          requestVersion !== this.progressRequestVersion ||
+          !this.sys.isActive()
+        ) {
           return;
         }
 
@@ -370,7 +465,7 @@ export default class SolarSystemScene extends Phaser.Scene {
 
     try {
       const response = await fetch(
-        `http://localhost:8000/trajectory/progress?from_planet=${this.from}&to_planet=${this.to}`
+        `${this.API_URL}/trajectory/progress?from_planet=${this.from}&to_planet=${this.to}`
       );
 
       if (!response.ok) {
@@ -382,20 +477,14 @@ export default class SolarSystemScene extends Phaser.Scene {
       const progress: TrajectoryProgress =
         await response.json();
 
-      // Ignore responses from an older scene run.
-      if (requestVersion !== this.progressRequestVersion) {
+      if (
+        requestVersion !== this.progressRequestVersion ||
+        !this.sys.isActive()
+      ) {
         return;
       }
 
       this.updateProgressPanel(progress);
-
-      // Stop polling only when the current run finishes.
-      if (
-        progress.stage === "complete" ||
-        progress.stage === "error"
-      ) {
-        this.stopProgressPolling(false);
-      }
 
     } catch (error) {
       if (requestVersion === this.progressRequestVersion) {
@@ -404,9 +493,10 @@ export default class SolarSystemScene extends Phaser.Scene {
           error
         );
       }
-
     } finally {
-      this.isFetchingProgress = false;
+      if (requestVersion === this.progressRequestVersion) {
+        this.isFetchingProgress = false;
+      }
     }
   }
 
@@ -428,26 +518,24 @@ export default class SolarSystemScene extends Phaser.Scene {
     const panelY =
       this.scale.height - panelHeight - this.panelMargin;
 
-    // Progress bar positioning.
     const barX = panelX + 24;
     const barY = panelY + panelHeight - 38;
     const barWidth = panelWidth - 48;
     const barHeight = 10;
 
-    // Calculate percentage.
-    const percentage = progress.total > 0
+    const completed = progress.completed ?? 0;
+    const total = progress.total ?? 0;
+
+    const percentage = total > 0
       ? Math.min(
           100,
           Math.max(
             0,
-            Math.round(
-              (progress.completed / progress.total) * 100
-            )
+            Math.round((completed / total) * 100)
           )
         )
       : 0;
 
-    // Format delta-v values.
     const formatDeltaV = (
       value?: number | null
     ): string => {
@@ -457,15 +545,10 @@ export default class SolarSystemScene extends Phaser.Scene {
     };
 
     const departureDate = progress.departure_date
-      ? new Date(
-          progress.departure_date
-        ).toLocaleDateString()
+      ? new Date(progress.departure_date).toLocaleDateString()
       : "Searching...";
 
-    // --------------------------------------------------
     // STATUS
-    // --------------------------------------------------
-
     let status =
       "Searching for efficient orbital transfers...";
 
@@ -477,41 +560,28 @@ export default class SolarSystemScene extends Phaser.Scene {
       } else {
         status = "Replaying saved calculation progress...";
       }
-
     } else if (progress.stage === "starting") {
       status = "Initializing transfer search...";
-
     } else if (progress.stage === "searching") {
       status = "Evaluating possible orbital transfers...";
-
     } else if (progress.stage === "generating") {
       status =
         "Best transfer found! Generating trajectory...";
-
     } else if (progress.stage === "complete") {
       status = "Orbital calculations complete!";
-
     } else if (progress.stage === "error") {
       status = `Calculation failed: ${
         progress.message ?? "Unknown error"
       }`;
-
     } else if (progress.stage === "waiting") {
       status = "Waiting for orbital calculations...";
     }
-
-    // --------------------------------------------------
-    // CALCULATION DESCRIPTION
-    // --------------------------------------------------
 
     const calculationDescription = progress.cached
       ? "Using previously saved orbital calculations"
       : "Running new orbital transfer calculations";
 
-    // --------------------------------------------------
     // INFORMATION TEXT
-    // --------------------------------------------------
-
     const infoText = [
       "ORBITAL MISSION CONTROL",
       "",
@@ -520,7 +590,7 @@ export default class SolarSystemScene extends Phaser.Scene {
       calculationDescription,
       "",
       "TRANSFER SEARCH",
-      `Search progress: ${progress.completed ?? 0} / ${progress.total ?? 0}`,
+      `Search progress: ${completed} / ${total}`,
       `Completion: ${percentage}%`,
       `Departure date: ${departureDate}`,
       `Flight duration: ${
@@ -539,17 +609,10 @@ export default class SolarSystemScene extends Phaser.Scene {
 
     this.progressText.setText(infoText);
 
-    // --------------------------------------------------
     // DRAW PROGRESS BAR
-    // --------------------------------------------------
-
     this.progressBar.clear();
 
-    // Background.
-    this.progressBar.fillStyle(
-      0x39435a,
-      1
-    );
+    this.progressBar.fillStyle(0x39435a, 1);
 
     this.progressBar.fillRoundedRect(
       barX,
@@ -559,11 +622,7 @@ export default class SolarSystemScene extends Phaser.Scene {
       5
     );
 
-    // Completed portion.
-    this.progressBar.fillStyle(
-      0xe8d5ad,
-      1
-    );
+    this.progressBar.fillStyle(0xe8d5ad, 1);
 
     if (percentage > 0) {
       this.progressBar.fillRoundedRect(
@@ -612,7 +671,6 @@ export default class SolarSystemScene extends Phaser.Scene {
     const centerX = width / 2;
     const centerY = height / 2 + 50;
 
-    // Visual distances are intentionally not to scale.
     const displayDistances: Record<PlanetName, number> = {
       venus: 150,
       earth: 230,
@@ -620,10 +678,7 @@ export default class SolarSystemScene extends Phaser.Scene {
       jupiter: 440
     };
 
-    // --------------------------------------------------
     // SUN
-    // --------------------------------------------------
-
     this.add.circle(
       centerX,
       centerY,
@@ -645,10 +700,7 @@ export default class SolarSystemScene extends Phaser.Scene {
       }
     ).setOrigin(0.5).setDepth(3);
 
-    // --------------------------------------------------
     // PLANETS
-    // --------------------------------------------------
-
     const imageKeys: Record<PlanetName, string> = {
       earth: "startingPlanet",
       mars: "planetB612",
@@ -657,10 +709,7 @@ export default class SolarSystemScene extends Phaser.Scene {
     };
 
     for (const planet of planets) {
-      const angle = Math.atan2(
-        planet.y,
-        planet.x
-      );
+      const angle = Math.atan2(planet.y, planet.x);
 
       const distance = displayDistances[planet.planet];
 
@@ -685,7 +734,6 @@ export default class SolarSystemScene extends Phaser.Scene {
       image.setDisplaySize(size, size);
       image.setDepth(2);
 
-      // Planet labels.
       this.add.text(
         x,
         y + 55,
@@ -727,7 +775,6 @@ export default class SolarSystemScene extends Phaser.Scene {
       return;
     }
 
-    // Calculate current planetary separation.
     const dx = destinationPlanet.x - startPlanet.x;
     const dy = destinationPlanet.y - startPlanet.y;
     const dz = destinationPlanet.z - startPlanet.z;
@@ -738,7 +785,6 @@ export default class SolarSystemScene extends Phaser.Scene {
 
     const distanceKM = distanceAU * 149597870.7;
 
-    // Panel dimensions.
     const boxWidth = 340;
     const boxHeight = 420;
     const margin = 25;
@@ -756,10 +802,7 @@ export default class SolarSystemScene extends Phaser.Scene {
     );
 
     panel.setOrigin(0, 0);
-    panel.setStrokeStyle(
-      2,
-      0xe8d5ad
-    );
+    panel.setStrokeStyle(2, 0xe8d5ad);
     panel.setScrollFactor(0);
     panel.setDepth(1000);
 
@@ -837,7 +880,6 @@ export default class SolarSystemScene extends Phaser.Scene {
       );
     }
 
-    // Calculate a 2D rotation and scale transformation.
     const a = (
       targetX * sourceX +
       targetY * sourceY
@@ -876,14 +918,18 @@ export default class SolarSystemScene extends Phaser.Scene {
   private animateRocket(
     points: TrajectoryPoint[]
   ) {
+    if (!this.trajectoryComplete) {
+      console.warn(
+        "Rocket launch prevented: trajectory is not complete."
+      );
+      return;
+    }
+
     try {
       const screenPoints =
         this.mapTrajectoryToScreen(points);
 
-      // --------------------------------------------------
       // DRAW TRAJECTORY PATH
-      // --------------------------------------------------
-
       const graphics = this.add.graphics();
 
       graphics.lineStyle(
@@ -913,10 +959,7 @@ export default class SolarSystemScene extends Phaser.Scene {
       graphics.strokePath();
       graphics.setDepth(5);
 
-      // --------------------------------------------------
       // CREATE ROCKET
-      // --------------------------------------------------
-
       const rocket = this.add.image(
         screenPoints[0].x,
         screenPoints[0].y,
@@ -926,10 +969,7 @@ export default class SolarSystemScene extends Phaser.Scene {
       rocket.setScale(0.35);
       rocket.setDepth(10);
 
-      // --------------------------------------------------
       // ANIMATE ROCKET
-      // --------------------------------------------------
-
       const progress = {
         value: 0
       };
@@ -982,7 +1022,6 @@ export default class SolarSystemScene extends Phaser.Scene {
         },
 
         onComplete: () => {
-          // Stop polling and clean up the progress panel.
           this.stopProgressPolling(true);
 
           if (this.to === "earth") {
