@@ -87,6 +87,11 @@ export default class BootScene extends Phaser.Scene {
 
     this.load.audio("music_bg", "/assets/audio/background.mp3"
     );
+
+    this.load.image(
+    "desk",
+    "/assets/objects/desk_1.png"
+    );
   }
 
   create() {
