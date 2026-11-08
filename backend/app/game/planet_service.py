@@ -1,5 +1,7 @@
+
 import csv
 import io
+import time
 from datetime import datetime, timedelta, timezone
 
 import requests
@@ -47,7 +49,10 @@ class PlanetService:
                 "CENTER": "500@10",
                 "REF_PLANE": "ECLIPTIC",
                 "OUT_UNITS": "AU-D",
-                "VEC_TABLE": "1",
+
+                # VEC_TABLE 2 returns position AND velocity
+                "VEC_TABLE": "2",
+
                 "VEC_LABELS": "NO",
                 "CSV_FORMAT": "YES",
                 "START_TIME": start_time.strftime("%Y-%m-%d %H:%M"),
@@ -55,20 +60,40 @@ class PlanetService:
                 "STEP_SIZE": "1m"
             }
 
-            # Send the request to NASA
-            response = requests.get(
-                HORIZONS_URL,
-                params=params,
-                timeout=30
-            )
+            # Try NASA up to 3 times for temporary server failures
+            response = None
 
-            response.raise_for_status()
+            for attempt in range(3):
+                try:
+                    response = requests.get(
+                        HORIZONS_URL,
+                        params=params,
+                        timeout=30
+                    )
+
+                    response.raise_for_status()
+                    break
+
+                except requests.exceptions.HTTPError as e:
+
+                    if (
+                        response is not None
+                        and response.status_code == 503
+                        and attempt < 2
+                    ):
+                        print(
+                            f"NASA temporarily unavailable for {planet_name}. "
+                            f"Retrying ({attempt + 1}/2)..."
+                        )
+
+                        time.sleep(2)
+                    else:
+                        raise e
 
             data = response.json()
 
             print("\n========== NASA DEBUG ==========")
             print("Planet:", planet_name)
-            print("Request URL:", response.url)
             print("HTTP Status:", response.status_code)
 
             # Check for errors returned by Horizons
@@ -77,58 +102,72 @@ class PlanetService:
 
             result = data["result"]
 
-            print("\nNASA Result:")
-            print(result)
-
             # Extract coordinate data
             if "$$SOE" not in result or "$$EOE" not in result:
                 raise RuntimeError(
-                    f"NASA did not return position data:\n{result}"
+                    f"NASA did not return state-vector data:\n{result}"
                 )
 
             position_data = result.split("$$SOE")[1].split("$$EOE")[0]
-
-            print("\nRaw position data:")
-            print(repr(position_data))
 
             rows = csv.reader(io.StringIO(position_data))
 
             for row in rows:
 
-                print("CSV row:", row)
-
-                if len(row) < 5:
+                if len(row) < 8:
                     continue
 
                 try:
                     # NASA CSV columns:
                     # 0 = Julian date
                     # 1 = Date and time
-                    # 2 = X coordinate
-                    # 3 = Y coordinate
-                    # 4 = Z coordinate
+                    # 2 = X position
+                    # 3 = Y position
+                    # 4 = Z position
+                    # 5 = X velocity
+                    # 6 = Y velocity
+                    # 7 = Z velocity
 
                     x = float(row[2])
                     y = float(row[3])
                     z = float(row[4])
 
-                    print("Parsed coordinates:", x, y, z)
+                    vx = float(row[5])
+                    vy = float(row[6])
+                    vz = float(row[7])
+
+                    print(
+                        f"Parsed state vector for {planet_name}: "
+                        f"position=({x}, {y}, {z}), "
+                        f"velocity=({vx}, {vy}, {vz})"
+                    )
 
                     return {
                         "planet": planet_name,
+
                         "x": x,
                         "y": y,
                         "z": z,
+
+                        "vx": vx,
+                        "vy": vy,
+                        "vz": vz,
+
+                        "position_unit": "AU",
+                        "velocity_unit": "AU/day",
+
+                        # Keep the original unit field for compatibility
                         "unit": "AU",
+
                         "date": start_time.isoformat()
                     }
 
                 except (ValueError, IndexError) as e:
-                    print("COORDINATE PARSING ERROR:", repr(e))
+                    print("STATE VECTOR PARSING ERROR:", repr(e))
                     continue
 
             raise RuntimeError(
-                f"Could not read planetary coordinates. "
+                f"Could not read planetary state vector. "
                 f"Raw data: {repr(position_data)}"
             )
 
@@ -150,24 +189,16 @@ class PlanetService:
 
         positions = []
 
-        try:
-            for planet_name in planet_names:
+        for planet_name in planet_names:
 
-                position = self.get_planet_position(
-                    planet_name,
-                    date_time=current_time
-                )
+            position = self.get_planet_position(
+                planet_name,
+                date_time=current_time
+            )
 
-                positions.append(position)
+            positions.append(position)
 
-            return {
-                "date": current_time.isoformat(),
-                "planets": positions
-            }
-
-        except Exception as e:
-            print("\nFAILED TO GET ALL PLANET POSITIONS:")
-            print("Exception type:", type(e).__name__)
-            print("Exception message:", str(e))
-
-            raise
+        return {
+            "date": current_time.isoformat(),
+            "planets": positions
+        }
