@@ -18,6 +18,14 @@ export default class BootScene extends Phaser.Scene {
         frameHeight: 304/4
     }
     );
+    this.load.spritesheet(
+    "king",
+    "/assets/characters/King_Sprite.png",
+    {
+        frameWidth: 228/3,
+        frameHeight: 304/4
+    }
+    );
     this.load.image(
         "planetB612",
         "/assets/planets/Planets/planet04.png"
