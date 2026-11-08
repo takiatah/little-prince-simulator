@@ -44,8 +44,8 @@ export default class DialogueBox {
       "",
       {
         fontSize: "20px",
-        color: "#e8d5ad",
-        fontFamily: "Georgia",
+        color: "#CBA031",
+        fontFamily: "Indie Flower",
         fontStyle: "bold"
       }
     )
@@ -59,8 +59,8 @@ export default class DialogueBox {
       "",
       {
         fontSize: "18px",
-        color: "#ffffff",
-        fontFamily: "Georgia",
+        color: "#E0D3B7",
+        fontFamily: "waiting for the sunrise",
         wordWrap: {
           width: width - 180
         },
@@ -77,8 +77,8 @@ export default class DialogueBox {
       "CONTINUE →",
       {
         fontSize: "16px",
-        color: "#f8e9c9",
-        backgroundColor: "#526b83",
+        color: "#B94126",
+        backgroundColor: "#a1bb6e",
         padding: { x: 12, y: 8 }
       }
     )
@@ -150,8 +150,8 @@ export default class DialogueBox {
         choice.text,
         {
           fontSize: "16px",
-          color: "#ffffff",
-          backgroundColor: "#526b83",
+          color: "#B94126",
+          backgroundColor: "#a1bb6e",
           padding: { x: 14, y: 10 },
           wordWrap: {
             width: horizontal
