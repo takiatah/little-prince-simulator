@@ -17,7 +17,6 @@ import time
 import uuid
 
 from concurrent.futures import ThreadPoolExecutor
-from concurrent.futures import TimeoutError as FutureTimeout
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -35,8 +34,27 @@ from app.game.traj_planner import TrajectoryPlanner
 from app.game.traj_gen import TrajectoryGenerator
 
 
+# ================================================================
+# CONFIGURATION
+# ================================================================
+
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR.parent / "game.db"
+
+PLANET_CACHE_SECONDS = 600
+PLANET_RETRY_SECONDS = 60
+NASA_TIMEOUT_SECONDS = 8
+
+VALID_PLANETS = {
+    "earth",
+    "mars",
+    "venus",
+    "jupiter"
+}
+
+# The GET trajectory endpoint searches:
+# 3 departure dates x 7 flight durations = 21 combinations.
+TRAJECTORY_SEARCH_STEPS = 21
 
 
 # ================================================================
@@ -56,7 +74,7 @@ trajectory_generator = TrajectoryGenerator()
 
 
 def valid_options(scene_id: str) -> set[str]:
-    """Choice IDs or minigame outcomes available in a scene."""
+    """Return choice IDs or minigame outcomes available in a scene."""
 
     scene = STORY["scenes"].get(scene_id)
 
@@ -83,7 +101,9 @@ def valid_options(scene_id: str) -> set[str]:
 
 @contextmanager
 def db():
-    conn = sqlite3.connect(DB_PATH)
+    """Open and safely close a SQLite database connection."""
+
+    conn = sqlite3.connect(DB_PATH, timeout=30)
     conn.row_factory = sqlite3.Row
 
     try:
@@ -93,7 +113,15 @@ def db():
         conn.close()
 
 
+def now() -> str:
+    """Return the current UTC timestamp."""
+
+    return datetime.now(timezone.utc).isoformat()
+
+
 def init_db() -> None:
+    """Create database tables if they do not already exist."""
+
     with db() as conn:
         conn.executescript(
             """
@@ -115,6 +143,14 @@ def init_db() -> None:
                 lessons TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS trajectory_cache (
+                route_key TEXT PRIMARY KEY,
+                from_planet TEXT NOT NULL,
+                to_planet TEXT NOT NULL,
+                result TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            );
             """
         )
 
@@ -122,8 +158,79 @@ def init_db() -> None:
 init_db()
 
 
-def now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+def save_trajectory(
+    from_planet: str,
+    to_planet: str,
+    result: dict[str, Any]
+) -> None:
+    """Save a calculated trajectory permanently in SQLite."""
+
+    from_planet = from_planet.lower()
+    to_planet = to_planet.lower()
+
+    route_key = f"{from_planet}_{to_planet}"
+
+    with db() as conn:
+        conn.execute(
+            """
+            INSERT INTO trajectory_cache
+            (route_key, from_planet, to_planet, result, created_at)
+            VALUES (?, ?, ?, ?, ?)
+
+            ON CONFLICT(route_key) DO UPDATE SET
+                from_planet = excluded.from_planet,
+                to_planet = excluded.to_planet,
+                result = excluded.result,
+                created_at = excluded.created_at
+            """,
+            (
+                route_key,
+                from_planet,
+                to_planet,
+                json.dumps(result),
+                now()
+            )
+        )
+
+    print(f"[trajectory] Saved {route_key} to SQLite")
+
+
+def load_trajectory(
+    from_planet: str,
+    to_planet: str
+) -> Optional[dict[str, Any]]:
+    """Load a previously calculated trajectory from SQLite."""
+
+    from_planet = from_planet.lower()
+    to_planet = to_planet.lower()
+
+    route_key = f"{from_planet}_{to_planet}"
+
+    with db() as conn:
+        row = conn.execute(
+            """
+            SELECT result
+            FROM trajectory_cache
+            WHERE route_key = ?
+            """,
+            (route_key,)
+        ).fetchone()
+
+    if row is None:
+        return None
+
+    try:
+        result = json.loads(row["result"])
+
+    except (json.JSONDecodeError, TypeError) as error:
+        print(
+            f"[trajectory] Could not load {route_key}: {error}"
+        )
+        return None
+
+    print(f"[trajectory] Loaded {route_key} from SQLite")
+
+    return result
 
 
 def save_choice_row(
@@ -131,6 +238,7 @@ def save_choice_row(
     scene_id: str,
     choice_id: str
 ) -> None:
+    """Save a player's choice."""
 
     with db() as conn:
         conn.execute(
@@ -139,7 +247,12 @@ def save_choice_row(
             (player_id, scene_id, choice_id, created_at)
             VALUES (?, ?, ?, ?)
             """,
-            (player_id, scene_id, choice_id, now()),
+            (
+                player_id,
+                scene_id,
+                choice_id,
+                now()
+            )
         )
 
 
@@ -181,19 +294,45 @@ def count_choices(scene_id: str) -> dict[str, Any]:
 
 
 # ================================================================
-# PLANETS: NASA + OFFLINE FALLBACK
+# TRAJECTORY CACHE
 # ================================================================
 
-PLANET_CACHE_SECONDS = 600
-PLANET_RETRY_SECONDS = 60
-NASA_TIMEOUT_SECONDS = 8
+# Fast in-memory cache.
+trajectory_cache: dict[
+    tuple[str, str],
+    dict[str, Any]
+] = {}
+
+# Current progress for each route.
+trajectory_progress: dict[
+    tuple[str, str],
+    dict[str, Any]
+] = {}
+
+# Prevent multiple cached progress animations for the same route.
+cached_simulations: set[
+    tuple[str, str]
+] = set()
+
+simulation_lock = threading.Lock()
+
+
+# ================================================================
+# PLANETS: NASA + OFFLINE FALLBACK
+# ================================================================
 
 _planet_cache: dict[
     str,
     tuple[float, dict[str, Any]]
 ] = {}
 
+# This pool handles actual NASA requests.
 _nasa_pool = ThreadPoolExecutor(max_workers=4)
+
+# This pool handles background cache warming.
+# Keeping these separate prevents nested executor deadlocks.
+_planet_warm_pool = ThreadPoolExecutor(max_workers=4)
+
 
 _ORBITS = {
     "venus": {
@@ -228,7 +367,7 @@ _J2000 = datetime(
 
 
 def approximate_position(name: str) -> dict[str, Any]:
-    """Calculate an approximate heliocentric position."""
+    """Calculate an approximate heliocentric planetary position."""
 
     when = datetime.now(timezone.utc)
     orbit = _ORBITS[name]
@@ -253,7 +392,7 @@ def approximate_position(name: str) -> dict[str, Any]:
 
 
 def get_position(name: str) -> dict[str, Any]:
-    """Get a planet position using NASA or a local fallback."""
+    """Get a planetary position using NASA or a local fallback."""
 
     name = name.lower()
 
@@ -293,6 +432,7 @@ def get_position(name: str) -> dict[str, Any]:
             "Using fallback."
         )
 
+        # Reuse the previous position if one exists.
         position = (
             cached[1]
             if cached
@@ -308,10 +448,13 @@ def get_position(name: str) -> dict[str, Any]:
 
 
 def warm_planet_cache() -> None:
-    """Warm the NASA position cache at startup."""
+    """Warm the planetary cache at startup."""
 
     for name in PLANETS:
-        _nasa_pool.submit(get_position, name)
+        _planet_warm_pool.submit(
+            get_position,
+            name
+        )
 
 
 # ================================================================
@@ -535,6 +678,7 @@ def save_progress(body: ProgressIn):
             INSERT INTO progress
             (player_id, scene_id, variables, lessons, updated_at)
             VALUES (?, ?, ?, ?, ?)
+
             ON CONFLICT(player_id) DO UPDATE SET
                 scene_id = excluded.scene_id,
                 variables = excluded.variables,
@@ -559,7 +703,11 @@ def load_progress(player_id: str):
 
     with db() as conn:
         row = conn.execute(
-            "SELECT * FROM progress WHERE player_id = ?",
+            """
+            SELECT *
+            FROM progress
+            WHERE player_id = ?
+            """,
             (player_id,)
         ).fetchone()
 
@@ -583,6 +731,8 @@ def load_progress(player_id: str):
 # ================================================================
 
 def get_game(player_id: str) -> GameManager:
+    """Retrieve an active game."""
+
     game = games.get(player_id)
 
     if game is None:
@@ -640,7 +790,6 @@ def finish_minigame(
     game: GameManager,
     outcome_id: str
 ) -> dict[str, Any]:
-
     """Apply a minigame outcome."""
 
     if hasattr(game, "process_minigame"):
@@ -798,7 +947,7 @@ def all_planet_positions():
     ]
 
     positions = list(
-        _nasa_pool.map(get_position, names)
+        _planet_warm_pool.map(get_position, names)
     )
 
     return {
@@ -848,20 +997,22 @@ def planet_position(name: str):
 @app.post("/trajectory")
 def calculate_trajectory(body: TrajectoryRequest):
     """
-    Explicitly calculate a trajectory using supplied dates
+    Calculate a trajectory using explicitly supplied dates
     and transfer search settings.
+
+    The result is saved in both memory and SQLite.
     """
 
     from_planet = body.from_planet.lower()
     to_planet = body.to_planet.lower()
 
-    if from_planet not in PLANETS:
+    if from_planet not in VALID_PLANETS:
         raise HTTPException(
             400,
             f"Unknown departure planet: {from_planet}"
         )
 
-    if to_planet not in PLANETS:
+    if to_planet not in VALID_PLANETS:
         raise HTTPException(
             400,
             f"Unknown arrival planet: {to_planet}"
@@ -916,12 +1067,26 @@ def calculate_trajectory(body: TrajectoryRequest):
             num_points=201
         )
 
-        return {
+        result = {
             "transfer": transfer,
             "trajectory": trajectory,
             "departure_state": departure_state,
             "arrival_state": arrival_state
         }
+
+        cache_key = (from_planet, to_planet)
+
+        # Save to memory.
+        trajectory_cache[cache_key] = result
+
+        # Save permanently to SQLite.
+        save_trajectory(
+            from_planet,
+            to_planet,
+            result
+        )
+
+        return result
 
     except HTTPException:
         raise
@@ -930,6 +1095,8 @@ def calculate_trajectory(body: TrajectoryRequest):
         raise HTTPException(400, str(error))
 
     except Exception as error:
+        print(f"[trajectory] POST calculation failed: {error}")
+
         raise HTTPException(
             502,
             f"Transfer planning failed: {error}"
@@ -937,41 +1104,25 @@ def calculate_trajectory(body: TrajectoryRequest):
 
 
 # ================================================================
-# GET TRAJECTORY + LIVE PROGRESS
+# CACHED TRAJECTORY PROGRESS REPLAY
 # ================================================================
-
-trajectory_cache: dict[
-    tuple[str, str],
-    dict[str, Any]
-] = {}
-
-trajectory_progress: dict[
-    tuple[str, str],
-    dict[str, Any]
-] = {}
-
-cached_simulations: set[
-    tuple[str, str]
-] = set()
-
-simulation_lock = threading.Lock()
-
 
 def simulate_cached_progress(
     cache_key: tuple[str, str],
     cached_result: dict[str, Any]
 ) -> None:
     """
-    Replay progress for a cached trajectory.
+    Replay progress for a previously calculated trajectory.
 
-    This does not perform new orbital calculations.
+    This is a visual replay of saved work. It does not perform
+    new orbital calculations.
     """
 
     transfer = cached_result["transfer"]
-    total_steps = 21
+    total_steps = TRAJECTORY_SEARCH_STEPS
 
     print(
-        f"Replaying cached trajectory: "
+        f"[trajectory] Replaying cached trajectory: "
         f"{cache_key[0]} -> {cache_key[1]}"
     )
 
@@ -1027,11 +1178,14 @@ def simulate_cached_progress(
             "cached": True
         }
 
-        print("Cached trajectory replay complete!")
+        print(
+            f"[trajectory] Cached replay complete: "
+            f"{cache_key[0]} -> {cache_key[1]}"
+        )
 
     except Exception as error:
         print(
-            f"Cached progress replay failed: {error}"
+            f"[trajectory] Cached progress replay failed: {error}"
         )
 
         trajectory_progress[cache_key] = {
@@ -1045,6 +1199,10 @@ def simulate_cached_progress(
             cached_simulations.discard(cache_key)
 
 
+# ================================================================
+# GET TRAJECTORY + LIVE PROGRESS
+# ================================================================
+
 @app.get("/trajectory")
 def get_trajectory(
     from_planet: str,
@@ -1053,27 +1211,25 @@ def get_trajectory(
     """
     Return a trajectory for the frontend.
 
-    Cached routes are returned immediately.
-    New routes are calculated with real progress updates.
+    Lookup order:
+        1. In-memory cache
+        2. Persistent SQLite cache
+        3. Calculate a new trajectory
+
+    Cached trajectories replay their saved progress.
+    New trajectories report actual calculation progress.
     """
 
     from_planet = from_planet.lower()
     to_planet = to_planet.lower()
 
-    valid_planets = {
-        "earth",
-        "mars",
-        "venus",
-        "jupiter"
-    }
-
-    if from_planet not in valid_planets:
+    if from_planet not in VALID_PLANETS:
         raise HTTPException(
             400,
             f"Invalid departure planet: {from_planet}"
         )
 
-    if to_planet not in valid_planets:
+    if to_planet not in VALID_PLANETS:
         raise HTTPException(
             400,
             f"Invalid destination planet: {to_planet}"
@@ -1088,17 +1244,40 @@ def get_trajectory(
     cache_key = (from_planet, to_planet)
 
     # --------------------------------------------------
-    # CHECK CACHE
+    # CHECK MEMORY CACHE
     # --------------------------------------------------
 
-    if cache_key in trajectory_cache:
+    cached_result = trajectory_cache.get(cache_key)
+
+    # --------------------------------------------------
+    # CHECK SQLITE CACHE IF NOT IN MEMORY
+    # --------------------------------------------------
+
+    if cached_result is None:
 
         print(
-            f"Using cached trajectory: "
+            f"[trajectory] Checking SQLite: "
             f"{from_planet} -> {to_planet}"
         )
 
-        cached_result = trajectory_cache[cache_key]
+        cached_result = load_trajectory(
+            from_planet,
+            to_planet
+        )
+
+        if cached_result is not None:
+            trajectory_cache[cache_key] = cached_result
+
+    # --------------------------------------------------
+    # REPLAY SAVED TRAJECTORY PROGRESS
+    # --------------------------------------------------
+
+    if cached_result is not None:
+
+        print(
+            f"[trajectory] Using saved trajectory: "
+            f"{from_planet} -> {to_planet}"
+        )
 
         with simulation_lock:
 
@@ -1106,12 +1285,14 @@ def get_trajectory(
 
                 cached_simulations.add(cache_key)
 
+                transfer = cached_result["transfer"]
+
                 trajectory_progress[cache_key] = {
                     "stage": "starting",
                     "completed": 0,
-                    "total": 21,
-                    "departure_date": cached_result["transfer"]["departure_date"],
-                    "flight_duration_days": cached_result["transfer"]["flight_duration_days"],
+                    "total": TRAJECTORY_SEARCH_STEPS,
+                    "departure_date": transfer["departure_date"],
+                    "flight_duration_days": transfer["flight_duration_days"],
                     "best_delta_v": None,
                     "departure_delta_v": None,
                     "arrival_delta_v": None,
@@ -1129,11 +1310,11 @@ def get_trajectory(
         return cached_result
 
     # --------------------------------------------------
-    # CALCULATE NEW TRAJECTORY
+    # CALCULATE A NEW TRAJECTORY
     # --------------------------------------------------
 
     print(
-        f"Calculating new trajectory: "
+        f"[trajectory] Calculating new trajectory: "
         f"{from_planet} -> {to_planet}"
     )
 
@@ -1171,7 +1352,7 @@ def get_trajectory(
             })
         )
 
-        print("Best transfer found!")
+        print("[trajectory] Best transfer found!")
 
         departure_date = datetime.fromisoformat(
             transfer["departure_date"]
@@ -1191,8 +1372,14 @@ def get_trajectory(
             arrival_date
         )
 
+        # Preserve the current progress while changing stages.
+        current_progress = trajectory_progress.get(
+            cache_key,
+            {}
+        )
+
         trajectory_progress[cache_key] = {
-            **trajectory_progress[cache_key],
+            **current_progress,
             "stage": "generating"
         }
 
@@ -1203,29 +1390,46 @@ def get_trajectory(
             num_points=201
         )
 
-        print("Trajectory generated!")
+        print("[trajectory] Trajectory generated!")
 
         print(
-            f"Number of points: "
+            f"[trajectory] Number of points: "
             f"{trajectory['num_points']}"
         )
 
         print(
-            f"Arrival error: "
+            f"[trajectory] Arrival error: "
             f"{trajectory['arrival_error_au']} AU"
         )
 
         result = {
             "transfer": transfer,
-            "trajectory": trajectory
+            "trajectory": trajectory,
+            "departure_state": departure_state,
+            "arrival_state": arrival_state
         }
+
+        # --------------------------------------------------
+        # SAVE RESULT TO MEMORY AND SQLITE
+        # --------------------------------------------------
 
         trajectory_cache[cache_key] = result
 
+        save_trajectory(
+            from_planet,
+            to_planet,
+            result
+        )
+
+        # Preserve the planner's actual completed/total values.
+        final_progress = trajectory_progress.get(
+            cache_key,
+            {}
+        )
+
         trajectory_progress[cache_key] = {
+            **final_progress,
             "stage": "complete",
-            "completed": 1,
-            "total": 1,
             "departure_date": transfer["departure_date"],
             "flight_duration_days": transfer["flight_duration_days"],
             "best_delta_v": transfer["total_delta_v"],
@@ -1239,7 +1443,7 @@ def get_trajectory(
     except Exception as error:
 
         print(
-            f"Trajectory calculation failed: {error}"
+            f"[trajectory] Calculation failed: {error}"
         )
 
         trajectory_progress[cache_key] = {
