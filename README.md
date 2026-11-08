@@ -150,12 +150,12 @@ Demo players have ids that start with `demo-`, so real players' data is never to
 | Backend | Game logic (`game/`), NASA planet service |
 
 ## Credits
- | Text |
+Text
     Saint-Exupéry,Antoine de.The Little Prince.Translated by Richard Howard,Harcourt,2000.
 
-| Character Sprites | 
+Character Sprites
     "Buildings collection" by macrovector Under magnific License: Free
-    
+
     "!$Lamplighter" from The Little Prince-The RPG Maker Game.CanFish.2024.Itch.Io
      https://canfish.itch.io/the-little-prince-rpg/devlog
 
@@ -167,7 +167,7 @@ Demo players have ids that start with `demo-`, so real players' data is never to
 
     "Retro rpg pixel art character noble old king shown in multiple views, medieval stories, game animation, npc roles, side view sprite sheets, fantasy worlds, top down 8 bit" by Karolina Under Adobe Stock Standard License  
 
-| Object Sprite |
+Object Sprite
     "Pixel Art Medieval Castle Fortress Illustration with Red Flags and Stone Towers for Video Games" by Hayyin Shalihah Under Adobe Stock Standard License
 
     "Set of pixel art office icons featuring a computer, desk, chair, laptop, printer, and other workspace equipment in a retro 8-bit video game style illustration" by Happy Carrot Under Adobe Stock Standard License
@@ -179,17 +179,17 @@ Demo players have ids that start with `demo-`, so real players' data is never to
     "RoseOUTLINED" from 12 Flower Pack!.JennPixel.2024.Itch.io
     https://jennpixel.itch.io/free-flower-pack-12-icons
 
-| planets assets |
+planets assets
     Planets by Kenny (Assets) Under License: CC0 1.0 Universal
     https://kenney-assets.itch.io/planets
 
-| Audio |
+Audio
     Marmixer."Deep SPace Journey".pixabay.Nov 8 2026
     https://pixabay.com/music/search/game%20background%20stars/
 
     "click.mp3".pixabay.Nov 8 2026
     https://pixabay.com/music/search/game%20background%20stars/
 
-| NASA JPL API |
+NASA JPL API
      NASA JPL.Horizon API.Version 1.3.NASA JPL
      https://ssd-api.jpl.nasa.gov/doc/horizons.html
