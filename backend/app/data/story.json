@@ -6,7 +6,6 @@
     "heartThreshold": 5,
     "notes": "All dialogue is original writing inspired by Antoine de Saint-Exupery's The Little Prince. 'heart' goes up when the player chooses curiosity and care; max is 8."
   },
-
   "variables": {
     "heart": 0,
     "listenedToPrince": false,
@@ -16,26 +15,67 @@
     "askedWhatFor": false,
     "lookedAtStars": false,
     "ownsStars": false,
-    "foundTeam": false
+    "foundTeam": false,
+    "wateredRose": false
   },
-
   "speakers": {
-    "narrator":    { "name": "Narrator",          "sprite": null },
-    "student":     { "name": "You",               "sprite": "student" },
-    "prince":      { "name": "The Little Prince", "sprite": "prince" },
-    "rose":        { "name": "The Rose",          "sprite": "rose" },
-    "king":        { "name": "The King",          "sprite": "king" },
-    "businessman": { "name": "The Businessman",   "sprite": "businessman" }
+    "narrator": {
+      "name": "Narrator",
+      "sprite": null
+    },
+    "student": {
+      "name": "You",
+      "sprite": "student"
+    },
+    "prince": {
+      "name": "The Little Prince",
+      "sprite": "prince"
+    },
+    "rose": {
+      "name": "The Rose",
+      "sprite": "rose"
+    },
+    "king": {
+      "name": "The King",
+      "sprite": "king"
+    },
+    "businessman": {
+      "name": "The Businessman",
+      "sprite": "businessman"
+    }
   },
-
   "chapters": [
-    { "id": "prologue",    "title": "Prologue: Davis Hall, 3 A.M.",  "background": "bg_davis_night", "music": "music_davis" },
-    { "id": "b612",        "title": "Chapter 1: Asteroid B-612",     "background": "bg_b612",        "music": "music_b612" },
-    { "id": "king",        "title": "Chapter 2: The King's Planet",  "background": "bg_king",        "music": "music_king" },
-    { "id": "businessman", "title": "Chapter 3: The Businessman's Planet", "background": "bg_businessman", "music": "music_businessman" },
-    { "id": "finale",      "title": "Chapter 4: Return to Davis Hall", "background": "bg_davis_dawn", "music": "music_finale" }
+    {
+      "id": "prologue",
+      "title": "Prologue: Davis Hall, 3 A.M.",
+      "background": "bg_davis_night",
+      "music": "music_davis"
+    },
+    {
+      "id": "b612",
+      "title": "Chapter 1: Asteroid B-612",
+      "background": "bg_b612",
+      "music": "music_b612"
+    },
+    {
+      "id": "king",
+      "title": "Chapter 2: The King's Planet",
+      "background": "bg_king",
+      "music": "music_king"
+    },
+    {
+      "id": "businessman",
+      "title": "Chapter 3: The Businessman's Planet",
+      "background": "bg_businessman",
+      "music": "music_businessman"
+    },
+    {
+      "id": "finale",
+      "title": "Chapter 4: Return to Davis Hall",
+      "background": "bg_davis_dawn",
+      "music": "music_finale"
+    }
   ],
-
   "lessons": {
     "busy_grownups": {
       "title": "Busy Grown-Ups",
@@ -58,28 +98,35 @@
       "text": "The most important things can't be seen with the eyes, only felt with the heart. Time spent together is what makes someone unique to you."
     }
   },
-
   "scenes": {
-
     "prologue_01": {
       "chapter": "prologue",
       "type": "dialogue",
       "transition": "fade",
       "lines": [
-        { "speaker": "narrator", "text": "Davis Hall, University at Buffalo. 3:07 A.M." },
-        { "speaker": "narrator", "text": "The hackathon floor has gone quiet. Your teammates went to find coffee an hour ago." },
-        { "speaker": "student",  "text": "Forty-two errors. Why are there forty-two errors?" },
-        { "speaker": "narrator", "text": "Outside the window, the sky over campus is full of stars. You haven't looked up once tonight." }
+        {
+          "speaker": "narrator",
+          "text": "Davis Hall, University at Buffalo. 3:07 A.M."
+        },
+        {
+          "speaker": "student",
+          "text": "42 errors. Why are there 42 errors?"
+        },
+        {
+          "speaker": "narrator",
+          "text": "Outside the window, the sky over campus is full of stars. You haven't looked up once tonight."
+        }
       ],
       "next": "prologue_02"
     },
-
     "prologue_02": {
       "chapter": "prologue",
       "type": "choice",
       "lines": [
-        { "speaker": "narrator", "text": "A small voice comes from right behind your chair." },
-        { "speaker": "prince",   "text": "Excuse me... will you code me a sheep?" }
+        {
+          "speaker": "prince",
+          "text": "Excuse me... will you code me a sheep?"
+        }
       ],
       "choices": [
         {
@@ -91,87 +138,175 @@
           "id": "listen",
           "text": "Turn around. \"...A sheep?\"",
           "next": "prologue_listen",
-          "effects": { "add": { "heart": 1 }, "set": { "listenedToPrince": true } }
+          "effects": {
+            "add": {
+              "heart": 1
+            },
+            "set": {
+              "listenedToPrince": true
+            }
+          }
         }
       ]
     },
-
     "prologue_ignore": {
       "chapter": "prologue",
       "type": "dialogue",
       "lines": [
-        { "speaker": "prince",   "text": "Important? More important than a sheep?" },
-        { "speaker": "narrator", "text": "He waits. He doesn't seem to mind waiting at all." },
-        { "speaker": "prince",   "text": "Please. Code me a sheep." },
-        { "speaker": "narrator", "text": "You sigh and finally turn around. A small boy with golden hair and a long scarf is standing there, very serious." }
+        {
+          "speaker": "prince",
+          "text": "Important? More important than a sheep?"
+        },
+        {
+          "speaker": "narrator",
+          "text": "You sigh and finally turn around. A small boy with golden hair and a long scarf is standing there, very serious."
+        }
       ],
       "next": "prologue_03"
     },
-
     "prologue_listen": {
       "chapter": "prologue",
       "type": "dialogue",
       "lines": [
-        { "speaker": "narrator", "text": "A small boy with golden hair and a long scarf is standing there, very serious." },
-        { "speaker": "student",  "text": "Okay... print(\"sheep\"). There. A sheep." },
-        { "speaker": "prince",   "text": "No, that one looks sick. And that one is too old." },
-        { "speaker": "student",  "text": "Fine. class Box: pass. Your sheep is inside the box." },
-        { "speaker": "prince",   "text": "Oh! That is exactly the one I wanted." }
+        {
+          "speaker": "narrator",
+          "text": "A small boy with golden hair and a long scarf is standing there, very serious."
+        },
+        {
+          "speaker": "student",
+          "text": "Fine. class Box: pass. Your sheep is inside the box."
+        },
+        {
+          "speaker": "prince",
+          "text": "Oh! That is exactly the one I wanted."
+        }
       ],
       "next": "prologue_03"
     },
-
     "prologue_03": {
       "chapter": "prologue",
       "type": "dialogue",
       "unlockLesson": "busy_grownups",
       "lines": [
-        { "speaker": "student",  "text": "Who are you? Where did you even come from?" },
-        { "speaker": "prince",   "text": "From very far away. From a planet hardly bigger than a house." },
-        { "speaker": "prince",   "text": "Would you like to hear about it? Grown-ups never want to. They're always busy with serious matters." },
-        { "speaker": "narrator", "text": "You glance at your forty-two errors. Then you close the laptop halfway." }
+        {
+          "speaker": "prince",
+          "text": "From very far away. From a planet hardly bigger than a house."
+        },
+        {
+          "speaker": "prince",
+          "text": "Would you like to hear about it? Grown-ups never want to. They're always busy with serious matters."
+        }
       ],
       "next": "b612_01"
     },
-
     "b612_01": {
       "chapter": "b612",
-      "type": "minigame",
+      "type": "dialogue",
       "transition": "starfield",
       "lines": [
-        { "speaker": "prince", "text": "This is home. Asteroid B-612." },
-        { "speaker": "prince", "text": "Every morning I take care of it: I water my flower, I sweep out my volcanoes, and I pull up the baobab sprouts before they grow too big." },
-        { "speaker": "prince", "text": "Will you help me?" }
-      ],
-      "minigame": {
-        "id": "b612_chores",
-        "tasks": [
-          { "id": "water_rose",      "label": "Water the rose" },
-          { "id": "clean_volcanoes", "label": "Sweep the three volcanoes" },
-          { "id": "pull_baobabs",    "label": "Pull up the baobab sprouts" }
-        ],
-        "outcomes": {
-          "complete": { "next": "b612_02" }
+        {
+          "speaker": "prince",
+          "text": "This is home. Asteroid B-612."
+        },
+        {
+          "speaker": "prince",
+          "text": "Every morning I take care of it: I water my flower, I sweep out my volcanoes, and I pull up the baobab sprouts before they grow too big."
         }
-      }
+      ],
+      "next": "b612_water"
     },
-
+    "b612_water": {
+      "chapter": "b612",
+      "type": "choice",
+      "lines": [
+        {
+          "speaker": "rose",
+          "text": "I'm not saying I'm thirsty (or maybe I am)."
+        },
+        {
+          "speaker": "prince",
+          "text": "Want to do the honors?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "water",
+          "text": "Grab the watering can.",
+          "next": "b612_water_yes",
+          "effects": {
+            "set": {
+              "wateredRose": true
+            }
+          }
+        },
+        {
+          "id": "skip_water",
+          "text": "\"She can wait.\"",
+          "next": "b612_water_no"
+        }
+      ]
+    },
+    "b612_water_yes": {
+      "chapter": "b612",
+      "type": "dialogue",
+      "animation": "water_rose",
+      "lines": [
+        {
+          "speaker": "narrator",
+          "text": "You water the rose."
+        },
+        {
+          "speaker": "rose",
+          "text": "Fine. That's... acceptable."
+        }
+      ],
+      "next": "b612_02"
+    },
+    "b612_water_no": {
+      "chapter": "b612",
+      "type": "dialogue",
+      "lines": [
+        {
+          "speaker": "rose",
+          "text": "Wonderful. I'll just wilt quietly, then."
+        },
+        {
+          "speaker": "narrator",
+          "text": "She does not wilt quietly."
+        }
+      ],
+      "next": "b612_02"
+    },
     "b612_02": {
       "chapter": "b612",
       "type": "choice",
       "lines": [
-        { "speaker": "rose",   "text": "Finally. You took your time this morning." },
-        { "speaker": "rose",   "text": "There's a draft. I can't bear drafts. Bring me my glass cover, please. And do something about the tigers." },
-        { "speaker": "prince", "text": "There are no tigers on my planet. And tigers don't eat flowers." },
-        { "speaker": "rose",   "text": "I'm not afraid of tigers. I simply... prefer to be prepared." },
-        { "speaker": "prince", "text": "(to you) She says such strange things. I love her, but I don't understand her at all." }
+        {
+          "speaker": "rose",
+          "text": "There's a draft. I can't bear drafts. Bring me my glass cover, please. And do something about the tigers."
+        },
+        {
+          "speaker": "prince",
+          "text": "There are no tigers on my planet. And tigers don't eat flowers."
+        },
+        {
+          "speaker": "prince",
+          "text": "(to you) She says such strange things. I love her, but I don't understand her at all."
+        }
       ],
       "choices": [
         {
           "id": "stay",
           "text": "\"Maybe try to understand her before you decide anything.\"",
           "next": "b612_stay",
-          "effects": { "add": { "heart": 1 }, "set": { "roseBond": true } }
+          "effects": {
+            "add": {
+              "heart": 1
+            },
+            "set": {
+              "roseBond": true
+            }
+          }
         },
         {
           "id": "leave",
@@ -180,63 +315,88 @@
         }
       ]
     },
-
     "b612_stay": {
       "chapter": "b612",
       "type": "dialogue",
       "lines": [
-        { "speaker": "narrator", "text": "The prince sits beside the rose for a long time and says nothing. He just watches her." },
-        { "speaker": "prince",   "text": "I think... her four thorns are all she has to protect herself. Maybe her pride is a kind of thorn too." },
-        { "speaker": "prince",   "text": "But I still need to see the universe. I need to understand things. Then I'll know how to love her properly." },
-        { "speaker": "rose",     "text": "Go, then. I was proud and foolish, and I'm sorry. I love you. I always have." },
-        { "speaker": "narrator", "text": "He leaves with a heavy heart, but he knows he'll come back." }
+        {
+          "speaker": "prince",
+          "text": "I think... her four thorns are all she has to protect herself. Maybe her pride is a kind of thorn too."
+        },
+        {
+          "speaker": "prince",
+          "text": "But I still need to see the universe. I need to understand things. Then I'll know how to love her properly."
+        },
+        {
+          "speaker": "rose",
+          "text": "Go, then. I was proud and foolish, and I'm sorry. I love you. I always have."
+        }
       ],
       "next": "b612_depart"
     },
-
     "b612_leave": {
       "chapter": "b612",
       "type": "dialogue",
       "lines": [
-        { "speaker": "narrator", "text": "The prince packs quickly. He cleans his volcanoes one last time and doesn't look at the rose." },
-        { "speaker": "rose",     "text": "So you're leaving." },
-        { "speaker": "prince",   "text": "Goodbye." },
-        { "speaker": "rose",     "text": "...Goodbye." },
-        { "speaker": "narrator", "text": "Much later, he would wonder whether he had judged her by her words instead of by what she did for him: she had filled his whole planet with her scent." }
+        {
+          "speaker": "rose",
+          "text": "So you're leaving."
+        },
+        {
+          "speaker": "prince",
+          "text": "Goodbye."
+        },
+        {
+          "speaker": "narrator",
+          "text": "Much later, he would wonder whether he had judged her by her words instead of by what she did for him: she had filled his whole planet with her scent."
+        }
       ],
       "next": "b612_depart"
     },
-
     "b612_depart": {
       "chapter": "b612",
       "type": "dialogue",
       "unlockLesson": "responsibility",
       "lines": [
-        { "speaker": "prince",   "text": "I left on a morning when the wild birds were migrating. I held onto them and flew out into the stars." },
-        { "speaker": "prince",   "text": "The first planet I reached belonged to a king." }
+        {
+          "speaker": "prince",
+          "text": "I left on a morning when the wild birds were migrating. I held onto them and flew out into the stars."
+        },
+        {
+          "speaker": "prince",
+          "text": "The first planet I reached belonged to a king."
+        }
       ],
       "next": "king_01"
     },
-
     "king_01": {
       "chapter": "king",
       "type": "dialogue",
       "transition": "starfield",
       "lines": [
-        { "speaker": "narrator", "text": "A king sits on a modest throne. His enormous purple robe covers almost the entire planet." },
-        { "speaker": "king",     "text": "Ah! Here is a subject! Approach, so that I can see you better." },
-        { "speaker": "narrator", "text": "There is nowhere to stand except on the robe. The prince stays where he is. He is very tired from the journey, and he yawns." }
+        {
+          "speaker": "king",
+          "text": "Ah! Here is a subject! Approach, so that I can see you better."
+        },
+        {
+          "speaker": "narrator",
+          "text": "There is nowhere to stand except on the robe. The prince stays where he is. He is very tired from the journey, and he yawns."
+        }
       ],
       "next": "king_02"
     },
-
     "king_02": {
       "chapter": "king",
       "type": "choice",
       "lines": [
-        { "speaker": "king",   "text": "Yawning? Before your king? That is simply not done! Stop at once!" },
-        { "speaker": "prince", "text": "I can't help it. I've traveled a long way and I haven't slept." },
-        { "speaker": "king",   "text": "Then... I order you to yawn! Yawning is a curiosity to me. Go on! It is an order!" }
+        {
+          "speaker": "king",
+          "text": "Yawning? Before your king? That is simply not done! Stop at once!"
+        },
+        {
+          "speaker": "king",
+          "text": "Then... I order you to yawn! Yawning is a curiosity to me. Go on! It is an order!"
+        }
       ],
       "choices": [
         {
@@ -248,7 +408,14 @@
           "id": "question",
           "text": "\"Why order something I was already doing?\"",
           "next": "king_question",
-          "effects": { "add": { "heart": 1 }, "set": { "questionedKing": true } }
+          "effects": {
+            "add": {
+              "heart": 1
+            },
+            "set": {
+              "questionedKing": true
+            }
+          }
         },
         {
           "id": "play_along",
@@ -257,134 +424,192 @@
         }
       ]
     },
-
     "king_obey": {
       "chapter": "king",
       "type": "dialogue",
       "lines": [
-        { "speaker": "narrator", "text": "The prince tries to yawn. Now that he's been ordered to, he can't." },
-        { "speaker": "king",     "text": "Hm. Then I order you to sometimes yawn and sometimes... not yawn. Yes. That is my command." },
-        { "speaker": "prince",   "text": "(to you) He changes his orders so he's always obeyed." }
+        {
+          "speaker": "narrator",
+          "text": "The prince tries to yawn. Now that he's been ordered to, he can't."
+        },
+        {
+          "speaker": "king",
+          "text": "Hm. Then I order you to sometimes yawn and sometimes... not yawn. Yes. That is my command."
+        }
       ],
       "next": "king_03"
     },
-
     "king_question": {
       "chapter": "king",
       "type": "dialogue",
       "lines": [
-        { "speaker": "king",   "text": "Hrm. Hrrm. A fair question, little subject." },
-        { "speaker": "king",   "text": "If I commanded my royal cook to bake a cake in one second, and he failed, whose fault would that be? His, or mine?" },
-        { "speaker": "prince", "text": "Yours, I think." },
-        { "speaker": "king",   "text": "Exactly. A king must only ask what can actually be done." }
+        {
+          "speaker": "king",
+          "text": "If I commanded my royal cook to bake a cake in one second, and he failed, whose fault would that be? His, or mine?"
+        },
+        {
+          "speaker": "prince",
+          "text": "Yours, I think."
+        },
+        {
+          "speaker": "king",
+          "text": "Exactly. A king must only ask what can actually be done."
+        }
       ],
       "next": "king_03"
     },
-
     "king_play_along": {
       "chapter": "king",
       "type": "dialogue",
       "lines": [
-        { "speaker": "king",     "text": "Excellent! What a well-mannered subject. It has been so long since I had one." },
-        { "speaker": "narrator", "text": "The king looks very pleased. The prince looks around at the empty planet and wonders who else the king has ever ruled." }
+        {
+          "speaker": "king",
+          "text": "Excellent! What a well-mannered subject. It has been so long since I had one."
+        }
       ],
       "next": "king_03"
     },
-
     "king_03": {
       "chapter": "king",
       "type": "dialogue",
       "unlockLesson": "authority",
       "lines": [
-        { "speaker": "prince", "text": "Sire, what do you rule over?" },
-        { "speaker": "king",   "text": "Over everything. My planet, the other planets, all the stars." },
-        { "speaker": "prince", "text": "Then could you order the sun to set? I love sunsets." },
-        { "speaker": "king",   "text": "You shall have your sunset. I will command it. But I must wait until conditions are favorable." },
-        { "speaker": "king",   "text": "Let me consult my almanac... This evening, at about seven-forty. You'll see how well I am obeyed." },
-        { "speaker": "prince", "text": "(to you) So he can only order things that were going to happen anyway." }
+        {
+          "speaker": "prince",
+          "text": "Then could you order the sun to set? I love sunsets."
+        },
+        {
+          "speaker": "king",
+          "text": "Let me consult my almanac... This evening, at about seven-forty. You'll see how well I am obeyed."
+        },
+        {
+          "speaker": "prince",
+          "text": "(to you) So he can only order things that were going to happen anyway."
+        }
       ],
       "next": "king_04"
     },
-
     "king_04": {
       "chapter": "king",
       "type": "choice",
       "lines": [
-        { "speaker": "prince", "text": "I think I'll be on my way." },
-        { "speaker": "king",   "text": "Don't go! I'll make you a minister. Minister of Justice!" },
-        { "speaker": "prince", "text": "But there's no one here to judge." },
-        { "speaker": "king",   "text": "Then you'll judge yourself. That is the hardest of all. If you can judge yourself well, you are truly wise." }
+        {
+          "speaker": "king",
+          "text": "Don't go! I'll make you a minister. Minister of Justice!"
+        },
+        {
+          "speaker": "prince",
+          "text": "But there's no one here to judge."
+        },
+        {
+          "speaker": "king",
+          "text": "Then you'll judge yourself. That is the hardest of all. If you can judge yourself well, you are truly wise."
+        }
       ],
       "choices": [
         {
           "id": "accept_title",
           "text": "Accept the title of Minister of Justice.",
           "next": "king_accept",
-          "effects": { "set": { "tookTitle": true } }
+          "effects": {
+            "set": {
+              "tookTitle": true
+            }
+          }
         },
         {
           "id": "leave",
           "text": "\"I can judge myself anywhere. I'll keep traveling.\"",
           "next": "king_leave",
-          "effects": { "add": { "heart": 1 } }
+          "effects": {
+            "add": {
+              "heart": 1
+            }
+          }
         }
       ]
     },
-
     "king_accept": {
       "chapter": "king",
       "type": "dialogue",
       "lines": [
-        { "speaker": "king",     "text": "Splendid! Minister, you may begin your duties." },
-        { "speaker": "narrator", "text": "The prince sits and waits. No one comes to be judged. There is an old rat somewhere on the planet, but it has nothing to say." },
-        { "speaker": "prince",   "text": "A title over nothing is still nothing. I'm leaving after all." },
-        { "speaker": "king",     "text": "Then... I make you my ambassador!" }
+        {
+          "speaker": "narrator",
+          "text": "The prince sits and waits. No one comes to be judged. There is an old rat somewhere on the planet, but it has nothing to say."
+        },
+        {
+          "speaker": "prince",
+          "text": "A title over nothing is still nothing. I'm leaving after all."
+        },
+        {
+          "speaker": "king",
+          "text": "Then... I make you my ambassador!"
+        }
       ],
       "next": "king_depart"
     },
-
     "king_leave": {
       "chapter": "king",
       "type": "dialogue",
       "lines": [
-        { "speaker": "narrator", "text": "The prince prepares to leave. The king doesn't want to be alone again, but he can't stop him." },
-        { "speaker": "king",     "text": "I... I make you my ambassador!" },
-        { "speaker": "narrator", "text": "He says it with a great air of authority, as if leaving had been his idea all along." }
+        {
+          "speaker": "king",
+          "text": "I... I make you my ambassador!"
+        },
+        {
+          "speaker": "narrator",
+          "text": "He says it with a great air of authority, as if leaving had been his idea all along."
+        }
       ],
       "next": "king_depart"
     },
-
     "king_depart": {
       "chapter": "king",
       "type": "dialogue",
       "lines": [
-        { "speaker": "prince", "text": "Grown-ups are very strange." },
-        { "speaker": "prince", "text": "The next planet belonged to a man who was too busy to look up." }
+        {
+          "speaker": "prince",
+          "text": "Grown-ups are very strange."
+        },
+        {
+          "speaker": "prince",
+          "text": "The next planet belonged to a man who was too busy to look up."
+        }
       ],
       "next": "biz_01"
     },
-
     "biz_01": {
       "chapter": "businessman",
       "type": "dialogue",
       "transition": "starfield",
       "lines": [
-        { "speaker": "narrator",    "text": "A man in a suit sits at a desk covered in papers, scribbling numbers. He doesn't raise his head." },
-        { "speaker": "businessman", "text": "Three hundred and twelve thousand, plus forty-nine... carry the one..." },
-        { "speaker": "prince",      "text": "Good morning." },
-        { "speaker": "businessman", "text": "Busy. Very busy. I'm a serious man. I don't have time for chatter." }
+        {
+          "speaker": "narrator",
+          "text": "A man in a suit sits at a desk covered in papers, scribbling numbers. He doesn't raise his head."
+        },
+        {
+          "speaker": "businessman",
+          "text": "Busy. Very busy. I'm a serious man. I don't have time for chatter."
+        }
       ],
       "next": "biz_02"
     },
-
     "biz_02": {
       "chapter": "businessman",
       "type": "choice",
       "lines": [
-        { "speaker": "prince",      "text": "What are you counting?" },
-        { "speaker": "businessman", "text": "Those tiny sparkly dots up there. The ones dreamers waste their evenings staring at." },
-        { "speaker": "prince",      "text": "The stars?" },
-        { "speaker": "businessman", "text": "Yes, yes, the stars. Five hundred and one million of them, and they're all mine." }
+        {
+          "speaker": "prince",
+          "text": "What are you counting?"
+        },
+        {
+          "speaker": "businessman",
+          "text": "Those tiny sparkly dots up there. The ones dreamers waste their evenings staring at."
+        },
+        {
+          "speaker": "businessman",
+          "text": "Yes, yes, the stars. Five hundred and one million of them, and they're all mine."
+        }
       ],
       "choices": [
         {
@@ -396,38 +621,55 @@
           "id": "what_for",
           "text": "\"What do you do with them?\"",
           "next": "biz_what_for",
-          "effects": { "add": { "heart": 1 }, "set": { "askedWhatFor": true } }
+          "effects": {
+            "add": {
+              "heart": 1
+            },
+            "set": {
+              "askedWhatFor": true
+            }
+          }
         }
       ]
     },
-
     "biz_help": {
       "chapter": "businessman",
       "type": "dialogue",
       "lines": [
-        { "speaker": "businessman", "text": "Finally, someone sensible! Here. Count these. Every star you count goes in the ledger." }
+        {
+          "speaker": "businessman",
+          "text": "Finally, someone sensible! Here. Count these. Every star you count goes in the ledger."
+        }
       ],
       "next": "biz_minigame"
     },
-
     "biz_what_for": {
       "chapter": "businessman",
       "type": "dialogue",
       "lines": [
-        { "speaker": "businessman", "text": "Do with them? Nothing. I own them." },
-        { "speaker": "prince",      "text": "And what good does owning them do you?" },
-        { "speaker": "businessman", "text": "It makes me rich. And being rich lets me buy more stars, if anyone discovers new ones." },
-        { "speaker": "prince",      "text": "(to you) He reasons a bit like the king did." },
-        { "speaker": "businessman", "text": "Enough questions. Make yourself useful and count." }
+        {
+          "speaker": "businessman",
+          "text": "Do with them? Nothing. I own them."
+        },
+        {
+          "speaker": "businessman",
+          "text": "It makes me rich. And being rich lets me buy more stars, if anyone discovers new ones."
+        },
+        {
+          "speaker": "businessman",
+          "text": "Enough questions. Make yourself useful and count."
+        }
       ],
       "next": "biz_minigame"
     },
-
     "biz_minigame": {
       "chapter": "businessman",
       "type": "minigame",
       "lines": [
-        { "speaker": "narrator", "text": "Click the stars to count them. The ledger is waiting." }
+        {
+          "speaker": "narrator",
+          "text": "Click the stars to count them. The ledger is waiting."
+        }
       ],
       "minigame": {
         "id": "star_counter",
@@ -436,7 +678,14 @@
         "outcomes": {
           "looked": {
             "next": "biz_looked",
-            "effects": { "add": { "heart": 1 }, "set": { "lookedAtStars": true } }
+            "effects": {
+              "add": {
+                "heart": 1
+              },
+              "set": {
+                "lookedAtStars": true
+              }
+            }
           },
           "kept_counting": {
             "next": "biz_counted"
@@ -444,126 +693,178 @@
         }
       }
     },
-
     "biz_looked": {
       "chapter": "businessman",
       "type": "dialogue",
       "lines": [
-        { "speaker": "narrator",    "text": "You stop clicking. The counter freezes. For a moment, you just look at the sky." },
-        { "speaker": "narrator",    "text": "The stars aren't numbers at all. They shimmer. Some of them seem to be laughing." },
-        { "speaker": "businessman", "text": "What are you doing? You've lost count! Now I'll have to start the whole column over." }
+        {
+          "speaker": "narrator",
+          "text": "You stop clicking. The counter freezes. For a moment, you just look at the sky."
+        },
+        {
+          "speaker": "narrator",
+          "text": "The stars aren't numbers at all. They shimmer. Some of them seem to be laughing."
+        },
+        {
+          "speaker": "businessman",
+          "text": "What are you doing? You've lost count! Now I'll have to start the whole column over."
+        }
       ],
       "next": "biz_03"
     },
-
     "biz_counted": {
       "chapter": "businessman",
       "type": "dialogue",
       "lines": [
-        { "speaker": "narrator",    "text": "The counter climbs higher and higher. Your finger aches. The number means nothing at all." },
-        { "speaker": "businessman", "text": "Good, good. Five hundred one million, six hundred twenty-two thousand... Not bad for a beginner." },
-        { "speaker": "prince",      "text": "You counted so many. Did you see a single one?" }
+        {
+          "speaker": "narrator",
+          "text": "The counter climbs higher and higher. Your finger aches. The number means nothing at all."
+        },
+        {
+          "speaker": "prince",
+          "text": "You counted so many. Did you see a single one?"
+        }
       ],
       "next": "biz_03"
     },
-
     "biz_03": {
       "chapter": "businessman",
       "type": "choice",
       "lines": [
-        { "speaker": "businessman", "text": "Tell you what. For your trouble, I'll sign a thousand stars over to you. I'll write it on a slip of paper and lock it in a drawer." },
-        { "speaker": "prince",      "text": "And then they'd be mine?" },
-        { "speaker": "businessman", "text": "Legally! That's all owning is." }
+        {
+          "speaker": "businessman",
+          "text": "Tell you what. For your trouble, I'll sign a thousand stars over to you. I'll write it on a slip of paper and lock it in a drawer."
+        }
       ],
       "choices": [
         {
           "id": "accept_stars",
           "text": "\"Sure, a thousand stars sounds great.\"",
           "next": "biz_accept",
-          "effects": { "set": { "ownsStars": true } }
+          "effects": {
+            "set": {
+              "ownsStars": true
+            }
+          }
         },
         {
           "id": "refuse_stars",
           "text": "\"No, thank you. What would I even do with them?\"",
           "next": "biz_refuse",
-          "effects": { "add": { "heart": 1 } }
+          "effects": {
+            "add": {
+              "heart": 1
+            }
+          }
         }
       ]
     },
-
     "biz_accept": {
       "chapter": "businessman",
       "type": "dialogue",
       "lines": [
-        { "speaker": "narrator",    "text": "The businessman writes 1,000 on a slip of paper, locks it in his drawer, and goes straight back to counting." },
-        { "speaker": "prince",      "text": "So... now what do I do with them?" },
-        { "speaker": "businessman", "text": "Nothing! You own them. Don't bother me." },
-        { "speaker": "prince",      "text": "(to you) My stars are in a drawer. I can't even see them from here." }
+        {
+          "speaker": "narrator",
+          "text": "The businessman writes 1,000 on a slip of paper, locks it in his drawer, and goes straight back to counting."
+        },
+        {
+          "speaker": "prince",
+          "text": "(to you) My stars are in a drawer. I can't even see them from here."
+        }
       ],
       "next": "biz_04"
     },
-
     "biz_refuse": {
       "chapter": "businessman",
       "type": "dialogue",
       "lines": [
-        { "speaker": "prince",      "text": "Back home I have a flower. I give her water every morning. I have three volcanoes too, and I keep them clean." },
-        { "speaker": "prince",      "text": "Because I take care of them, they're better off. Your stars don't even know you exist." },
-        { "speaker": "businessman", "text": "..." },
-        { "speaker": "narrator",    "text": "The businessman opens his mouth, finds nothing to say, and goes back to his numbers." }
+        {
+          "speaker": "prince",
+          "text": "Back home I have a flower. I give her water every morning. I have three volcanoes too, and I keep them clean."
+        },
+        {
+          "speaker": "prince",
+          "text": "Because I take care of them, they're better off. Your stars don't even know you exist."
+        },
+        {
+          "speaker": "narrator",
+          "text": "The businessman opens his mouth, finds nothing to say, and goes back to his numbers."
+        }
       ],
       "next": "biz_04"
     },
-
     "biz_04": {
       "chapter": "businessman",
       "type": "dialogue",
       "unlockLesson": "owning_vs_caring",
       "lines": [
-        { "speaker": "prince", "text": "Grown-ups are really very, very strange." },
-        { "speaker": "prince", "text": "Looking at all those stars, I kept thinking about one of them. Mine. And the flower on it." },
-        { "speaker": "prince", "text": "After that, my journey brought me all the way to Earth. And to you." }
+        {
+          "speaker": "prince",
+          "text": "Looking at all those stars, I kept thinking about one of them. Mine. And the flower on it."
+        },
+        {
+          "speaker": "prince",
+          "text": "After that, my journey brought me all the way to Earth. And to you."
+        }
       ],
       "next": "finale_01"
     },
-
     "finale_01": {
       "chapter": "finale",
       "type": "dialogue",
       "transition": "starfield",
       "lines": [
-        { "speaker": "narrator", "text": "Davis Hall. The windows are turning pale blue. Dawn is almost here." },
-        { "speaker": "prince",   "text": "That's my story. And now I have to go home. My flower is all alone, and she only has four thorns." },
-        { "speaker": "student",  "text": "You're leaving? Already?" }
+        {
+          "speaker": "narrator",
+          "text": "Davis Hall. The windows are turning pale blue. Dawn is almost here."
+        },
+        {
+          "speaker": "prince",
+          "text": "That's my story. And now I have to go home. My flower is all alone, and she only has four thorns."
+        }
       ],
       "next": "finale_02"
     },
-
     "finale_02": {
       "chapter": "finale",
       "type": "dialogue",
       "unlockLesson": "invisible",
       "lines": [
-        { "speaker": "prince",  "text": "On my way to you, I met a goose. A big gray one, right outside this building." },
-        { "speaker": "student", "text": "The campus geese? They hiss at everyone." },
-        { "speaker": "prince",  "text": "She hissed at me too, at first. Then she asked me to tame her." },
-        { "speaker": "student", "text": "Tame her? What does that mean?" },
-        { "speaker": "prince",  "text": "It's when you spend so much time with someone that they become different from everyone else. They become yours, and you become theirs." },
-        { "speaker": "prince",  "text": "So I came back every day at the same time and sat a little closer. Now, of all the geese in the world, she is the only one who is mine." },
-        { "speaker": "prince",  "text": "She told me a secret: the things that matter most can't be seen with your eyes. You see them with your heart." },
-        { "speaker": "prince",  "text": "She also told me why geese fly in a V. Each one makes the wind a little easier for the one behind. Nobody crosses the sky alone." },
-        { "speaker": "prince",  "text": "My rose is special because of all the time I gave her. That's what I didn't understand before I left." }
+        {
+          "speaker": "prince",
+          "text": "On my way to you, I met a goose. A big gray one, right outside this building."
+        },
+        {
+          "speaker": "prince",
+          "text": "She hissed at me too, at first. Then she asked me to tame her."
+        },
+        {
+          "speaker": "prince",
+          "text": "It's when you spend so much time with someone that they become different from everyone else. They become yours, and you become theirs."
+        },
+        {
+          "speaker": "prince",
+          "text": "She told me a secret: the things that matter most can't be seen with your eyes. You see them with your heart."
+        },
+        {
+          "speaker": "prince",
+          "text": "She also told me why geese fly in a V. Each one makes the wind a little easier for the one behind. Nobody crosses the sky alone."
+        }
       ],
       "next": "finale_03"
     },
-
     "finale_03": {
       "chapter": "finale",
       "type": "choice",
       "lines": [
-        { "speaker": "narrator", "text": "Your laptop buzzes. Messages from your team: 'got coffee', 'where r u??', 'we fixed the bug i think lol'." },
-        { "speaker": "prince",   "text": "Who are they?" },
-        { "speaker": "student",  "text": "My team. We came here to build something together." }
+        {
+          "speaker": "narrator",
+          "text": "Your laptop buzzes. Messages from your team: 'got coffee', 'where r u??', 'we fixed the bug i think lol'."
+        },
+        {
+          "speaker": "student",
+          "text": "My team. We came here to build something together."
+        }
       ],
       "choices": [
         {
@@ -575,61 +876,103 @@
           "id": "find_team",
           "text": "Close the laptop and go find your team.",
           "next": "finale_team",
-          "effects": { "add": { "heart": 1 }, "set": { "foundTeam": true } }
+          "effects": {
+            "add": {
+              "heart": 1
+            },
+            "set": {
+              "foundTeam": true
+            }
+          }
         }
       ]
     },
-
     "finale_alone": {
       "chapter": "finale",
       "type": "dialogue",
       "lines": [
-        { "speaker": "narrator", "text": "You turn back to the screen. When you look up again, the boy is gone." },
-        { "speaker": "narrator", "text": "Only a small text file is left open on your desktop: sheep_in_a_box.py." }
+        {
+          "speaker": "narrator",
+          "text": "You turn back to the screen. When you look up again, the boy is gone."
+        },
+        {
+          "speaker": "narrator",
+          "text": "Only a small text file is left open on your desktop: sheep_in_a_box.py."
+        }
       ],
       "next": "ending_router"
     },
-
     "finale_team": {
       "chapter": "finale",
       "type": "dialogue",
       "lines": [
-        { "speaker": "prince",   "text": "Good. They're your flock, I think. And your rose." },
-        { "speaker": "narrator", "text": "You turn toward the door. When you look back, the boy is gone." },
-        { "speaker": "narrator", "text": "Only a small text file is left open on your desktop: sheep_in_a_box.py." }
+        {
+          "speaker": "prince",
+          "text": "Good. They're your flock, I think. And your rose."
+        },
+        {
+          "speaker": "narrator",
+          "text": "You turn toward the door. When you look back, the boy is gone."
+        },
+        {
+          "speaker": "narrator",
+          "text": "Only a small text file is left open on your desktop: sheep_in_a_box.py."
+        }
       ],
       "next": "ending_router"
     },
-
     "ending_router": {
       "chapter": "finale",
       "type": "branch",
       "branches": [
-        { "if": { "var": "heart", "op": ">=", "value": 5 }, "next": "ending_tamed" }
+        {
+          "if": {
+            "var": "heart",
+            "op": ">=",
+            "value": 5
+          },
+          "next": "ending_tamed"
+        }
       ],
       "default": "ending_grownup"
     },
-
     "ending_tamed": {
       "chapter": "finale",
       "type": "ending",
       "ending": "tamed",
       "lines": [
-        { "speaker": "narrator", "text": "Ending: The Tamed." },
-        { "speaker": "narrator", "text": "The sun comes up over campus. You still have bugs to fix, but somehow it doesn't feel so heavy." },
-        { "speaker": "narrator", "text": "Tonight, when you look up, one of those stars will be laughing. You'll know which one." }
+        {
+          "speaker": "narrator",
+          "text": "Ending: The Tamed."
+        },
+        {
+          "speaker": "narrator",
+          "text": "The sun comes up over campus. You still have bugs to fix, but somehow it doesn't feel so heavy."
+        },
+        {
+          "speaker": "narrator",
+          "text": "Tonight, when you look up, one of those stars will be laughing. You'll know which one."
+        }
       ],
       "showJournal": true
     },
-
     "ending_grownup": {
       "chapter": "finale",
       "type": "ending",
       "ending": "grownup",
       "lines": [
-        { "speaker": "narrator", "text": "Ending: The Grown-Up." },
-        { "speaker": "narrator", "text": "You finish the code just as the sun rises. Zero errors. It should feel like more than it does." },
-        { "speaker": "narrator", "text": "Somewhere far away, a small boy is watering a flower. Maybe, if you listen more closely next time, you'll understand why that matters." }
+        {
+          "speaker": "narrator",
+          "text": "Ending: The Grown-Up."
+        },
+        {
+          "speaker": "narrator",
+          "text": "You finish the code just as the sun rises. Zero errors. It should feel like more than it does."
+        },
+        {
+          "speaker": "narrator",
+          "text": "Somewhere far away, a small boy is watering a flower. Maybe, if you listen more closely next time, you'll understand why that matters."
+        }
       ],
       "showJournal": true
     }

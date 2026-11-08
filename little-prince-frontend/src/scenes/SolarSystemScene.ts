@@ -67,6 +67,7 @@ export default class SolarSystemScene extends Phaser.Scene {
       loadingText.destroy();
 
       this.drawSolarSystem(data.planets);
+      this.drawTravelInfo(data.planets);
       this.animateRocket();
 
     } catch (error) {
@@ -167,6 +168,90 @@ export default class SolarSystemScene extends Phaser.Scene {
     }
   }
 
+    private drawTravelInfo(planets: PlanetPosition[]) {
+    const planetNames: Record<PlanetName, string> = {
+        earth: "Davis Hall (Earth)",
+        mars: "Asteroid B-612 (Mars)",
+        venus: "King's Planet (Venus)",
+        jupiter: "Businessman's Planet (Jupiter)"
+    };
+
+    const startPlanet = planets.find(
+        (planet) => planet.planet === this.from
+    );
+
+    const destinationPlanet = planets.find(
+        (planet) => planet.planet === this.to
+    );
+
+    if (!startPlanet || !destinationPlanet) return;
+
+    // Calculate real distance using NASA coordinates.
+    const dx = destinationPlanet.x - startPlanet.x;
+    const dy = destinationPlanet.y - startPlanet.y;
+    const dz = destinationPlanet.z - startPlanet.z;
+
+    const distanceAU = Math.sqrt(
+        dx * dx + dy * dy + dz * dz
+    );
+
+    const distanceKM = distanceAU * 149597870.7;
+
+    // Box dimensions and position.
+    const boxWidth = 380;
+    const boxHeight = 230;
+    const margin = 25;
+
+    const boxX = this.scale.width - boxWidth - margin;
+    const boxY = margin;
+
+    // Background panel.
+    const panel = this.add.rectangle(
+        boxX,
+        boxY,
+        boxWidth,
+        boxHeight,
+        0x10152d,
+        0.92
+    );
+
+    panel.setOrigin(0, 0);
+    panel.setStrokeStyle(2, 0xe8d5ad);
+    panel.setScrollFactor(0);
+    panel.setDepth(1000);
+
+    // Information text.
+    const infoText = [
+        "TRAVEL INFORMATION",
+        "",
+        `FROM: ${planetNames[this.from]}`,
+        "",
+        `TO: ${planetNames[this.to]}`,
+        "",
+        "REAL DISTANCE:",
+        `${distanceAU.toFixed(3)} AU`,
+        `${Math.round(distanceKM).toLocaleString("en-US")} km`
+    ].join("\n");
+
+    const text = this.add.text(
+        boxX + 24,  // More left padding
+        boxY + 20,  // More top padding
+        infoText,
+        {
+            fontSize: "14px",
+            color: "#ffffff",
+            fontFamily: "Georgia",
+            lineSpacing: 4,
+            wordWrap: {
+            width: boxWidth - 48
+            }
+        }
+    );
+    
+    text.setScrollFactor(0);
+    text.setDepth(1001);
+    }
+
   private animateRocket() {
     const start = this.planetPositions.get(this.from);
     const end = this.planetPositions.get(this.to);
@@ -237,5 +322,5 @@ export default class SolarSystemScene extends Phaser.Scene {
         }
       }
     });
-  }
+  } 
 }

@@ -60,7 +60,7 @@ export default class DialogueBox {
       {
         fontSize: "18px",
         color: "#E0D3B7",
-        fontFamily: "waiting for the sunrise",
+        fontFamily: "Georgia",
         wordWrap: {
           width: width - 180
         },

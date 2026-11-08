@@ -70,6 +70,11 @@ export default class BootScene extends Phaser.Scene {
     "castle",
     "/assets/objects/castle.png"
     );
+    this.load.audio("sfx_click", "/assets/audio/click.mp3"
+    );
+
+    this.load.audio("music_bg", "/assets/audio/background.mp3"
+    );
   }
 
   create() {

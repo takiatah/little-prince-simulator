@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+﻿import Phaser from "phaser";
 import GalaxyBackground from "../components/GalaxyBackground";
 
 export default class Menu extends Phaser.Scene {
@@ -69,20 +69,10 @@ export default class Menu extends Phaser.Scene {
     //UB HACKING PROJECT
     this.add.text(
       width / 2,
-      height /  2- 5,
-      "A 2026 UB HACKING PROJECT",
+      height / 2 - 5,
+      "Inspired by the book",
       {
-        fontSize: "14px",
-        color: "#dad19d",
-        fontFamily: "Indie Flower"
-      }
-    ).setOrigin(0.5);
-    this.add.text(
-      width / 2,
-      height /  1- 305,
-      "Inspired by The Little Prince",
-      {
-        fontSize: "14px",
+        fontSize: "17px",
         color: "#dad19d",
         fontFamily: "Indie Flower"
       }
@@ -103,7 +93,7 @@ export default class Menu extends Phaser.Scene {
     // Start button
     const startButton = this.add.text(
       width / 2,
-      height / 1 -195,
+      height / 1 -220,
       "START JOURNEY",
       {
         fontFamily: "Indie Flower",
@@ -118,7 +108,22 @@ export default class Menu extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
 
     startButton.on("pointerdown", () => {
-        this.scene.start("DavisScene");
+      // Click sound (only if it loaded)
+      if (this.cache.audio.exists("sfx_click")) {
+        this.sound.play("sfx_click", { volume: 0.6 });
+      }
+
+      // Background music: loops for the whole game, never starts twice
+      if (this.cache.audio.exists("music_bg") && !this.sound.get("music_bg")?.isPlaying) {
+        this.sound.play("music_bg", { loop: true, volume: 0.35 });
+      }
+
+      this.scene.start("DavisScene");
+    });
+
+    // Press M to mute/unmute
+    this.input.keyboard?.on("keydown-M", () => {
+      this.sound.mute = !this.sound.mute;
     });
   }
 }
