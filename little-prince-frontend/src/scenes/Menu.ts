@@ -69,20 +69,10 @@ export default class Menu extends Phaser.Scene {
     //UB HACKING PROJECT
     this.add.text(
       width / 2,
-      height /  2- 5,
-      "A 2026 UB HACKING PROJECT",
+      height / 2 - 5,
+      "Inspired by the book",
       {
-        fontSize: "14px",
-        color: "#dad19d",
-        fontFamily: "Indie Flower"
-      }
-    ).setOrigin(0.5);
-    this.add.text(
-      width / 2,
-      height /  1- 305,
-      "Inspired by The Little Prince",
-      {
-        fontSize: "14px",
+        fontSize: "17px",
         color: "#dad19d",
         fontFamily: "Indie Flower"
       }
@@ -103,7 +93,7 @@ export default class Menu extends Phaser.Scene {
     // Start button
     const startButton = this.add.text(
       width / 2,
-      height / 1 -195,
+      height / 1 -220,
       "START JOURNEY",
       {
         fontFamily: "Indie Flower",
