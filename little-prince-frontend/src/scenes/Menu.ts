@@ -47,24 +47,35 @@ export default class Menu extends Phaser.Scene {
     // Game title
     this.add.text(
       width / 2,
-      height / 2 - 140,
-      "THE LITTLE PRINCE",
+      height / 2 - 130,
+      "THE",
       {
-        fontSize: "30px",
-        color: "#f8e9c9",
-        fontFamily: "Georgia"
+        fontSize: "34px",
+        color: "#EBD247",
+        fontFamily: "Over the Rainbow"
       }
     ).setOrigin(0.5);
+    this.add.text(
+      width / 2,
+      height / 2 - 77,
+      "LITTLE PRINCE",
+      {
+        fontSize: "34px",
+        color: "#EBD247",
+        fontFamily: "Over the Rainbow"
+      }
+    ).setOrigin(0.5);
+
 
     // Start button
     const startButton = this.add.text(
       width / 2,
-      height / 2 - 30,
+      height / 2 - 1,
       "START JOURNEY",
       {
         fontSize: "22px",
         color: "#ffffff",
-        backgroundColor: "#526b83",
+        backgroundColor: "#50508d",
         padding: { x: 20, y: 12 }
       }
     )
