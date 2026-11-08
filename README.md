@@ -148,3 +148,35 @@ Demo players have ids that start with `demo-`, so real players' data is never to
 | Frontend | Planets, characters, art, fonts |
 | Backend | Story (`story.json`), API (`main.py`), stats |
 | Backend | Game logic (`game/`), NASA planet service |
+
+## Credits
+
+| Character Sprites | 
+    "!$Lamplighter" from The Little Prince-The RPG Maker Game.CanFish.2024.Itch.Io
+     https://canfish.itch.io/the-little-prince-rpg/devlog
+
+    "Pixel art girl with computer on blue background. 8 bit illustration." by virtosmedia.123RF
+    https://www.123rf.com/free-photo_199272461_pixel-art-girl-with-computer-on-blue-background-8-bit-illustration.html
+    
+    "!$Prince" from The Little Prince-The RPG Maker Game.CanFish.2024.Itch.Io
+    https://canfish.itch.io/the-little-prince-rpg/devlog
+
+    "Retro rpg pixel art character noble old king shown in multiple views, medieval stories, game animation, npc roles, side view sprite sheets, fantasy worlds, top down 8 bit" by Karolina Under Adobe Stock Standard License  
+
+| Object Sprite |
+    "Pixel Art Medieval Castle Fortress Illustration with Red Flags and Stone Towers for Video Games" by Hayyin Shalihah Under Adobe Stock Standard License
+
+    "Set of pixel art office icons featuring a computer, desk, chair, laptop, printer, and other workspace equipment in a retro 8-bit video game style illustration" by Happy Carrot Under Adobe Stock Standard License
+
+    "spray watering can game pixel art vector illustration Pro Vector" by Pavel Sevryukov Under Vecteezy Pro Standard License
+
+    "Rocket" by Selina Lin 2026
+
+    "RoseOUTLINED" from 12 Flower Pack!.JennPixel.2024.Itch.io
+    https://jennpixel.itch.io/free-flower-pack-12-icons
+
+  | planets assets |
+    Planets by Kenny (Assets) Under License: CC0 1.0 Universal
+    https://kenney-assets.itch.io/planets
+
+| Audio |
