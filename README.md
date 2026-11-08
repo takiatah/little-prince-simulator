@@ -150,6 +150,8 @@ Demo players have ids that start with `demo-`, so real players' data is never to
 | Backend | Game logic (`game/`), NASA planet service |
 
 ## Credits
+ | Text |
+Saint-Exupéry,Antoine de.The Little Prince.Translated by Richard Howard,Harcourt,2000.
 
 | Character Sprites | 
     "!$Lamplighter" from The Little Prince-The RPG Maker Game.CanFish.2024.Itch.Io
