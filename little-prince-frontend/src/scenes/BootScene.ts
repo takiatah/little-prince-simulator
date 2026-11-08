@@ -80,6 +80,10 @@ export default class BootScene extends Phaser.Scene {
     "davisHall",
     "/assets/objects/davis-hall.png"
     );
+    this.load.image(
+    "wateringCan",
+    "/assets/objects/watering-can.png"
+    );
 
     this.load.audio("music_bg", "/assets/audio/background.mp3"
     );

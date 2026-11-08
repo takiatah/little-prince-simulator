@@ -23,13 +23,11 @@ export default class StoryChapterScene extends Phaser.Scene {
     private planetImage?: Phaser.GameObjects.Image;
     private princeImage?: Phaser.GameObjects.Image;
     private characterImage?: Phaser.GameObjects.Image;
-    private girlImage?: Phaser.GameObjects.Sprite;
-    private laptopImage?: Phaser.GameObjects.Image;
     private introPrompt?: Phaser.GameObjects.Text;
     private castleImage?: Phaser.GameObjects.Image;
     private davisHallImage?: Phaser.GameObjects.Image;
     private girlWithLaptopImage?: Phaser.GameObjects.Image;
-
+    private wateringCanImage?: Phaser.GameObjects.Image;
 
     private minigameButtons: Phaser.GameObjects.Text[] = [];
     private introComplete = false;
@@ -366,8 +364,8 @@ export default class StoryChapterScene extends Phaser.Scene {
         }
 
 
-            // --------------------------------
-            // JUPITER: Prince and Businessman
+        // --------------------------------
+        // JUPITER: Prince and Businessman
         // --------------------------------
         else if (this.currentPlanet === "jupiter") {
             // Little Prince
@@ -401,10 +399,12 @@ export default class StoryChapterScene extends Phaser.Scene {
         }
 
 
-            // --------------------------------
-            // MARS: Prince and Rose
+        // --------------------------------
+        // MARS: Prince, Watering Can, and Rose
         // --------------------------------
         else if (this.currentPlanet === "mars") {
+
+            // Little Prince
             this.princeImage = this.add.sprite(
                 width / 2 - radius * 0.18,
                 characterY,
@@ -412,24 +412,36 @@ export default class StoryChapterScene extends Phaser.Scene {
                 1
             );
 
-
             this.princeImage.setOrigin(0.5, 1);
             this.princeImage.setScale(1.2);
             this.princeImage.setDepth(2);
             this.uiCamera.ignore(this.princeImage);
 
 
+            // Rose
             this.characterImage = this.add.image(
                 width / 2 + radius * 0.10,
                 characterY,
                 "rose"
             );
 
-
             this.characterImage.setOrigin(0.5, 1);
             this.characterImage.setScale(1.5);
             this.characterImage.setDepth(2);
             this.uiCamera.ignore(this.characterImage);
+
+
+            // Watering can between the Prince and Rose
+            this.wateringCanImage = this.add.image(
+                width / 2 - radius * 0.04,
+                characterY - 5,
+                "wateringCan"
+            );
+
+            this.wateringCanImage.setOrigin(0.5, 1);
+            this.wateringCanImage.setScale(0.1);
+            this.wateringCanImage.setDepth(3);
+            this.uiCamera.ignore(this.wateringCanImage);
         }
     }
 
@@ -566,9 +578,17 @@ export default class StoryChapterScene extends Phaser.Scene {
 
     private makeChoice(choice: StoryChoice) {
         this.story.choose(choice);
+
+        // Check whether the player chose to water the rose.
+        if (
+            this.currentPlanet === "mars" &&
+            choice.id === "water"
+        ) {
+            this.animateWateringCan();
+        }
+
         this.showCurrentNode();
     }
-
 
     private finishNode() {
         const nextNode = this.story.completeDialogue();
@@ -640,6 +660,33 @@ export default class StoryChapterScene extends Phaser.Scene {
         });
     }
 
+    private animateWateringCan() {
+        if (!this.wateringCanImage) return;
+
+        // Prevent the can from being animated more than once.
+        this.tweens.killTweensOf(this.wateringCanImage);
+
+        const can = this.wateringCanImage;
+
+        // Remember its original position and rotation.
+        const originalY = can.y;
+        const originalRotation = can.rotation;
+
+        // Lift the can and tilt it toward the rose.
+        this.tweens.add({
+            targets: can,
+            y: originalY - 45,
+            angle: 55,
+            duration: 700,
+            ease: "Sine.easeInOut",
+            yoyo: true,
+            hold: 900,
+            onComplete: () => {
+                can.setY(originalY);
+                can.setRotation(originalRotation);
+            }
+        });
+    }
 
     private clearMinigameButtons() {
         this.minigameButtons.forEach(button => button.destroy());
