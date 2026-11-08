@@ -3,11 +3,20 @@
 Run from the backend/ folder:
     uvicorn app.main:app --reload
 Then open http://localhost:8000/docs to try the endpoints.
+
+Who owns what:
+    app/main.py           -> API endpoints (this file)
+    app/game/*.py         -> game logic (StoryManager, GameManager, planets)
+    app/data/story.json   -> the story
 """
 import json
+import math
 import sqlite3
+import threading
 import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeout
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -25,21 +34,21 @@ from app.game.story_manager import StoryManager
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR.parent / "game.db"
 
+# ================================================================ story & game logic
+
 story_manager = StoryManager()
 STORY: dict[str, Any] = story_manager.get_story()
 
 # One GameManager per player, kept in memory.
+# (Restarting the server clears these; use /progress to save between restarts.)
 games: dict[str, GameManager] = {}
 
 planet_service = PlanetService()
 distance_calculator = DistanceCalculator()
 
-# NASA calls are slow, so remember each planet's position for 10 minutes.
-PLANET_CACHE_SECONDS = 600
-_planet_cache: dict[str, tuple[float, dict[str, Any]]] = {}
-
 
 def valid_options(scene_id: str) -> set[str]:
+    """Choice ids (or minigame outcome keys) a player can pick in a scene."""
     scene = STORY["scenes"].get(scene_id)
     if scene is None:
         raise HTTPException(404, f"Scene '{scene_id}' does not exist")
@@ -48,6 +57,8 @@ def valid_options(scene_id: str) -> set[str]:
         options |= set(scene["minigame"]["outcomes"])
     return options
 
+
+# ================================================================ database
 
 @contextmanager
 def db():
@@ -65,20 +76,20 @@ def init_db() -> None:
         conn.executescript(
             """
             CREATE TABLE IF NOT EXISTS choices (
-                id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                player_id  TEXT NOT NULL,
-                scene_id   TEXT NOT NULL,
-                choice_id  TEXT NOT NULL,
-                created_at TEXT NOT NULL
+                                                   id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                                                   player_id  TEXT NOT NULL,
+                                                   scene_id   TEXT NOT NULL,
+                                                   choice_id  TEXT NOT NULL,
+                                                   created_at TEXT NOT NULL
             );
             CREATE INDEX IF NOT EXISTS idx_choices_scene ON choices(scene_id);
 
             CREATE TABLE IF NOT EXISTS progress (
-                player_id  TEXT PRIMARY KEY,
-                scene_id   TEXT NOT NULL,
-                variables  TEXT NOT NULL,
-                lessons    TEXT NOT NULL,
-                updated_at TEXT NOT NULL
+                                                    player_id  TEXT PRIMARY KEY,
+                                                    scene_id   TEXT NOT NULL,
+                                                    variables  TEXT NOT NULL,
+                                                    lessons    TEXT NOT NULL,
+                                                    updated_at TEXT NOT NULL
             );
             """
         )
@@ -99,15 +110,116 @@ def save_choice_row(player_id: str, scene_id: str, choice_id: str) -> None:
         )
 
 
+def count_choices(scene_id: str) -> dict[str, Any]:
+    """Counts and percentages for one scene's options."""
+    options = valid_options(scene_id)
+    with db() as conn:
+        rows = conn.execute(
+            "SELECT choice_id, COUNT(*) AS n FROM choices WHERE scene_id = ? GROUP BY choice_id",
+            (scene_id,),
+        ).fetchall()
+    counts = {opt: 0 for opt in sorted(options)}
+    for r in rows:
+        if r["choice_id"] in counts:
+            counts[r["choice_id"]] = r["n"]
+    total = sum(counts.values())
+    return {
+        "total": total,
+        "counts": counts,
+        "percentages": {k: round(100 * v / total) if total else 0 for k, v in counts.items()},
+    }
+
+
+# ================================================================ planets (NASA + offline fallback)
+
+# NASA calls are slow, so keep each planet's position for 10 minutes.
+PLANET_CACHE_SECONDS = 600
+# If NASA fails, try it again after 1 minute (meanwhile, use the fallback).
+PLANET_RETRY_SECONDS = 60
+# Never make a player wait longer than this for NASA.
+NASA_TIMEOUT_SECONDS = 8
+
+_planet_cache: dict[str, tuple[float, dict[str, Any]]] = {}
+_nasa_pool = ThreadPoolExecutor(max_workers=4)
+
+# Approximate orbits (circular, on the ecliptic) from standard J2000 mean elements.
+# Used only when NASA can't be reached, so the game never breaks during a demo.
+#   a  = distance from the sun in AU
+#   L0 = mean longitude at J2000 (degrees)
+#   n  = degrees travelled per day
+_ORBITS = {
+    "venus":   {"a": 0.72333, "L0": 181.97980, "n": 1.6021302},
+    "earth":   {"a": 1.00000, "L0": 100.46457, "n": 0.9856091},
+    "mars":    {"a": 1.52371, "L0": -4.55343, "n": 0.5240329},
+    "jupiter": {"a": 5.20289, "L0": 34.39644, "n": 0.0830853},
+}
+_J2000 = datetime(2000, 1, 1, 12, tzinfo=timezone.utc)
+
+
+def approximate_position(name: str) -> dict[str, Any]:
+    """Rough position of a planet today, calculated locally (no internet needed)."""
+    when = datetime.now(timezone.utc)
+    orbit = _ORBITS[name]
+    days = (when - _J2000).total_seconds() / 86400
+    angle = math.radians((orbit["L0"] + orbit["n"] * days) % 360)
+    return {
+        "planet": name,
+        "x": orbit["a"] * math.cos(angle),
+        "y": orbit["a"] * math.sin(angle),
+        "z": 0.0,
+        "unit": "AU",
+        "date": when.isoformat(),
+        "source": "approximate",
+    }
+
+
+def get_position(name: str) -> dict[str, Any]:
+    """A planet's position: NASA if possible, otherwise the last known or approximate one."""
+    name = name.lower()
+    if name not in PLANETS:
+        raise HTTPException(404, f"Unknown planet '{name}'. Options: {sorted(PLANETS)}")
+
+    cached = _planet_cache.get(name)
+    if cached and time.time() < cached[0]:
+        return cached[1]
+
+    try:
+        future = _nasa_pool.submit(planet_service.get_planet_position, name)
+        position = dict(future.result(timeout=NASA_TIMEOUT_SECONDS))
+        position["source"] = "nasa"
+        _planet_cache[name] = (time.time() + PLANET_CACHE_SECONDS, position)
+        return position
+    except (FutureTimeout, Exception) as e:  # network down, NASA slow, bad data...
+        print(f"[planets] NASA failed for {name}: {e!r}. Using fallback.")
+        # Prefer an older NASA answer; otherwise calculate one.
+        position = cached[1] if cached else approximate_position(name)
+        _planet_cache[name] = (time.time() + PLANET_RETRY_SECONDS, position)
+        return position
+
+
+def warm_planet_cache() -> None:
+    """Ask NASA for every planet in the background when the server starts,
+    so the first trip in the game is instant."""
+    for name in PLANETS:
+        _nasa_pool.submit(get_position, name)
+
+
+threading.Thread(target=warm_planet_cache, daemon=True).start()
+
+
+# ================================================================ app
+
 app = FastAPI(title="Little Prince Simulator API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # fine for a hackathon; lock down for production
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+
+# ================================================================ request bodies
 
 class ChoiceIn(BaseModel):
     player_id: str = Field(min_length=1, examples=["player-123"])
@@ -123,7 +235,7 @@ class ProgressIn(BaseModel):
 
 
 class StartGameIn(BaseModel):
-    player_id: Optional[str] = Field(default=None, examples=[None])
+    player_id: Optional[str] = Field(default=None, examples=[None], description="Leave empty to get a new id")
 
 
 class GameChoiceIn(BaseModel):
@@ -134,6 +246,8 @@ class MinigameIn(BaseModel):
     outcome_id: str = Field(examples=["complete"])
 
 
+# ================================================================ story, choices & stats
+
 @app.get("/")
 def health():
     return {"status": "ok", "title": STORY["meta"]["title"], "version": STORY["meta"]["version"]}
@@ -141,11 +255,13 @@ def health():
 
 @app.get("/story")
 def get_story():
+    """The full story. The frontend loads this once and plays it."""
     return STORY
 
 
 @app.post("/choice", status_code=201)
 def record_choice(body: ChoiceIn):
+    """Record a choice (or minigame result) so it shows up in /stats."""
     options = valid_options(body.scene_id)
     if body.choice_id not in options:
         raise HTTPException(
@@ -155,41 +271,57 @@ def record_choice(body: ChoiceIn):
     return {"ok": True}
 
 
+@app.get("/stats/summary")
+def get_stats_summary():
+    """Percentages for every decision in the game, in story order. Handy for the ending screen."""
+    decisions = []
+    for scene_id, scene in STORY["scenes"].items():
+        if scene["type"] == "choice":
+            labels = {c["id"]: c["text"] for c in scene["choices"]}
+        elif scene["type"] == "minigame" and len(scene["minigame"]["outcomes"]) > 1:
+            labels = {k: k.replace("_", " ") for k in scene["minigame"]["outcomes"]}
+        else:
+            continue
+        stats = count_choices(scene_id)
+        decisions.append({
+            "scene_id": scene_id,
+            "chapter": scene["chapter"],
+            "total": stats["total"],
+            "options": [
+                {
+                    "choice_id": cid,
+                    "text": labels[cid],
+                    "count": stats["counts"][cid],
+                    "percent": stats["percentages"][cid],
+                }
+                for cid in labels
+            ],
+        })
+    return {"decisions": decisions}
+
+
 @app.get("/stats/{scene_id}")
 def get_stats(scene_id: str):
-    options = valid_options(scene_id)
-    if not options:
+    """How many players picked each choice in a scene, with percentages."""
+    if not valid_options(scene_id):
         raise HTTPException(400, f"Scene '{scene_id}' has no choices")
-    with db() as conn:
-        rows = conn.execute(
-            "SELECT choice_id, COUNT(*) AS n FROM choices WHERE scene_id = ? GROUP BY choice_id",
-            (scene_id,),
-        ).fetchall()
-    counts = {opt: 0 for opt in sorted(options)}
-    for r in rows:
-        counts[r["choice_id"]] = r["n"]
-    total = sum(counts.values())
-    return {
-        "scene_id": scene_id,
-        "total": total,
-        "counts": counts,
-        "percentages": {k: round(100 * v / total) if total else 0 for k, v in counts.items()},
-    }
+    return {"scene_id": scene_id, **count_choices(scene_id)}
 
 
 @app.post("/progress")
 def save_progress(body: ProgressIn):
-    valid_options(body.scene_id)
+    """Save (or overwrite) a player's progress."""
+    valid_options(body.scene_id)  # 404s if the scene doesn't exist
     with db() as conn:
         conn.execute(
             """
             INSERT INTO progress (player_id, scene_id, variables, lessons, updated_at)
             VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT(player_id) DO UPDATE SET
+                ON CONFLICT(player_id) DO UPDATE SET
                 scene_id = excluded.scene_id,
-                variables = excluded.variables,
-                lessons = excluded.lessons,
-                updated_at = excluded.updated_at
+                                              variables = excluded.variables,
+                                              lessons = excluded.lessons,
+                                              updated_at = excluded.updated_at
             """,
             (body.player_id, body.scene_id, json.dumps(body.variables), json.dumps(body.lessons), now()),
         )
@@ -198,6 +330,7 @@ def save_progress(body: ProgressIn):
 
 @app.get("/progress/{player_id}")
 def load_progress(player_id: str):
+    """Load a player's saved progress."""
     with db() as conn:
         row = conn.execute("SELECT * FROM progress WHERE player_id = ?", (player_id,)).fetchone()
     if row is None:
@@ -211,6 +344,8 @@ def load_progress(player_id: str):
     }
 
 
+# ================================================================ game endpoints (GameManager)
+
 def get_game(player_id: str) -> GameManager:
     game = games.get(player_id)
     if game is None:
@@ -219,18 +354,19 @@ def get_game(player_id: str) -> GameManager:
 
 
 def run_game_action(action):
+    """Turn GameManager errors into clean HTTP errors."""
     try:
         return action()
-    except KeyError as e:
+    except KeyError as e:          # unknown scene / choice / outcome
         raise HTTPException(400, str(e.args[0]) if e.args else "Not found")
-    except ValueError as e:
+    except ValueError as e:        # wrong action for this scene type
         raise HTTPException(400, str(e))
-    except RuntimeError as e:
+    except RuntimeError as e:      # game not started / already ended
         raise HTTPException(409, str(e))
 
 
 def advance_game(game: GameManager) -> dict[str, Any]:
-    # Uses GameManager.advance() once it exists; until then, does the same thing here.
+    """Move past a dialogue scene (uses GameManager.advance() if it exists)."""
     if hasattr(game, "advance"):
         return game.advance()
     if game.game_completed:
@@ -243,7 +379,7 @@ def advance_game(game: GameManager) -> dict[str, Any]:
 
 
 def finish_minigame(game: GameManager, outcome_id: str) -> dict[str, Any]:
-    # Uses GameManager.process_minigame() once it exists; until then, does the same thing here.
+    """Apply a minigame result (uses GameManager.process_minigame() if it exists)."""
     if hasattr(game, "process_minigame"):
         return game.process_minigame(outcome_id)
     if game.game_completed:
@@ -260,6 +396,7 @@ def finish_minigame(game: GameManager, outcome_id: str) -> dict[str, Any]:
 
 @app.post("/game/start", status_code=201)
 def start_game(body: Optional[StartGameIn] = None):
+    """Start a new game. Returns a player_id and the first scene."""
     player_id = (body.player_id if body and body.player_id else None) or uuid.uuid4().hex[:12]
     game = GameManager(story_manager)
     state = run_game_action(game.start_game)
@@ -269,18 +406,21 @@ def start_game(body: Optional[StartGameIn] = None):
 
 @app.get("/game/{player_id}")
 def get_game_state(player_id: str):
+    """The player's current scene, stats, lessons and ending."""
     game = get_game(player_id)
     return {"player_id": player_id, **run_game_action(game.get_game_state)}
 
 
 @app.post("/game/{player_id}/advance")
 def advance(player_id: str):
+    """Continue past a dialogue scene."""
     game = get_game(player_id)
     return {"player_id": player_id, **run_game_action(lambda: advance_game(game))}
 
 
 @app.post("/game/{player_id}/choice")
 def make_choice(player_id: str, body: GameChoiceIn):
+    """Pick a choice in a choice scene. Also counts toward /stats."""
     game = get_game(player_id)
     scene_id = game.current_scene
     state = run_game_action(lambda: game.process_choice(body.choice_id))
@@ -290,6 +430,7 @@ def make_choice(player_id: str, body: GameChoiceIn):
 
 @app.post("/game/{player_id}/minigame")
 def complete_minigame(player_id: str, body: MinigameIn):
+    """Report a minigame result (e.g. 'complete', 'looked', 'kept_counting'). Also counts toward /stats."""
     game = get_game(player_id)
     scene_id = game.current_scene
     state = run_game_action(lambda: finish_minigame(game, body.outcome_id))
@@ -297,34 +438,35 @@ def complete_minigame(player_id: str, body: MinigameIn):
     return {"player_id": player_id, **state}
 
 
-def cached_position(name: str) -> dict[str, Any]:
-    name = name.lower()
-    if name not in PLANETS:
-        raise HTTPException(404, f"Unknown planet '{name}'. Options: {sorted(PLANETS)}")
-    hit = _planet_cache.get(name)
-    if hit and time.time() - hit[0] < PLANET_CACHE_SECONDS:
-        return hit[1]
-    try:
-        position = planet_service.get_planet_position(name)
-    except Exception as e:
-        raise HTTPException(502, f"Could not get {name}'s position from NASA: {e}")
-    _planet_cache[name] = (time.time(), position)
-    return position
-
+# ================================================================ planet endpoints
 
 @app.get("/planets")
 def list_planets():
+    """Planets we can look up."""
     return {"planets": sorted(PLANETS)}
+
+
+@app.get("/planets/positions")
+def all_planet_positions():
+    """Positions of every planet at once (used by the solar system map). Never fails."""
+    names = ["earth", "mars", "venus", "jupiter"]
+    return {"planets": list(_nasa_pool.map(get_position, names))}
 
 
 @app.get("/planets/distance")
 def planet_distance(
-    from_planet: str = Query(alias="from", examples=["earth"]),
-    to_planet: str = Query(alias="to", examples=["mars"]),
+        from_planet: str = Query(alias="from", examples=["earth"]),
+        to_planet: str = Query(alias="to", examples=["mars"]),
 ):
-    a = cached_position(from_planet)
-    b = cached_position(to_planet)
-    return {"from": a["planet"], "to": b["planet"], **distance_calculator.calculate_distance(a, b)}
+    """Distance between two planets right now."""
+    a = get_position(from_planet)
+    b = get_position(to_planet)
+    return {
+        "from": a["planet"],
+        "to": b["planet"],
+        "source": "nasa" if a["source"] == b["source"] == "nasa" else "approximate",
+        **distance_calculator.calculate_distance(a, b),
+    }
 
 @app.get("/planets/positions")
 def all_planet_positions():
@@ -339,4 +481,5 @@ def all_planet_positions():
 
 @app.get("/planets/{name}")
 def planet_position(name: str):
-    return cached_position(name)
+    """A planet's position around the sun right now."""
+    return get_position(name)
