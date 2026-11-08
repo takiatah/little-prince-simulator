@@ -14,8 +14,8 @@ export default class BootScene extends Phaser.Scene {
     "prince",
     "/assets/characters/!$Prince.png",
     {
-        frameWidth: 128,
-        frameHeight: 128
+        frameWidth: 50,
+        frameHeight: 100
     }
     );
   }
