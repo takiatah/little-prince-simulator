@@ -77,8 +77,8 @@ export default class DialogueBox {
       "CONTINUE →",
       {
         fontSize: "16px",
-        color: "#B94126",
-        backgroundColor: "#a1bb6e",
+        color: "#E0D3B7",
+        backgroundColor: "#4D6B66",
         padding: { x: 12, y: 8 }
       }
     )
@@ -150,8 +150,8 @@ export default class DialogueBox {
         choice.text,
         {
           fontSize: "16px",
-          color: "#B94126",
-          backgroundColor: "#a1bb6e",
+          color: "#E0D3B7",
+          backgroundColor: "#4D6B66",
           padding: { x: 14, y: 10 },
           wordWrap: {
             width: horizontal
