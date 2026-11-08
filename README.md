@@ -151,9 +151,11 @@ Demo players have ids that start with `demo-`, so real players' data is never to
 
 ## Credits
  | Text |
-Saint-Exupéry,Antoine de.The Little Prince.Translated by Richard Howard,Harcourt,2000.
+    Saint-Exupéry,Antoine de.The Little Prince.Translated by Richard Howard,Harcourt,2000.
 
 | Character Sprites | 
+    "Buildings collection" by macrovector Under magnific License: Free
+    
     "!$Lamplighter" from The Little Prince-The RPG Maker Game.CanFish.2024.Itch.Io
      https://canfish.itch.io/the-little-prince-rpg/devlog
 
@@ -177,7 +179,7 @@ Saint-Exupéry,Antoine de.The Little Prince.Translated by Richard Howard,Harcour
     "RoseOUTLINED" from 12 Flower Pack!.JennPixel.2024.Itch.io
     https://jennpixel.itch.io/free-flower-pack-12-icons
 
-  | planets assets |
+| planets assets |
     Planets by Kenny (Assets) Under License: CC0 1.0 Universal
     https://kenney-assets.itch.io/planets
 
