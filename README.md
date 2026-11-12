@@ -6,6 +6,10 @@ It's 3 a.m. in **Davis Hall at UB**, deep into a hackathon. A small boy with gol
 
 > Inspired by Antoine de Saint-Exupéry's *The Little Prince*. All dialogue in this game is our own original writing.
 
+
+https://github.com/user-attachments/assets/d2ec4d5f-80f9-4969-a255-53028effd292
+
+
 ## Features
 
 - **Choices that matter.** Each choice on each planet changes your *heart* score and story flags. Your choices lead to one of two endings: **The Tamed** or **The Grown-Up**.
