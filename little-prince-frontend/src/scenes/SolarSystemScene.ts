@@ -76,7 +76,7 @@ interface TrajectoryProgress {
 // ================================================================
 
 export default class SolarSystemScene extends Phaser.Scene {
-  private readonly API_URL = "http://localhost:8000";
+  private readonly API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
   private planetPositions: Map<
     PlanetName,
