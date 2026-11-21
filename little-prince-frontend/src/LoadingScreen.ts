@@ -82,7 +82,7 @@ export default class BackendLoadingScene extends Phaser.Scene {
 
       if (attempt > 1) {
         status.setText(
-            'Please disable any ad blockers and refresh'
+            `Connecting to mission control...\nAttempt ${attempt} of 20 (please disable any ad blockers and refresh)`
         );
       }
 
