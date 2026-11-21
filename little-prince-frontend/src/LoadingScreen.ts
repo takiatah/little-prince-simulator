@@ -80,6 +80,12 @@ export default class BackendLoadingScene extends Phaser.Scene {
         `Connecting to mission control...\nAttempt ${attempt} of 20`
       );
 
+      if (attempt > 1) {
+        status.setText(
+            'Please disable any ad blockers and refresh'
+        );
+      }
+
       const controller = new AbortController();
       const timeout = setTimeout(
         () => controller.abort(),
