@@ -118,11 +118,13 @@ export default class StoryChapterScene extends Phaser.Scene {
         this.introPrompt = this.add.text(
             width / 2,
             height - 100,
-            "PRESS ENTER TO BEGIN",
+            "PRESS ENTER OR CLICK ANYWHERE TO BEGIN",
             {
-                fontSize: "22px",
-                color: "#E0D3B7",
-                fontFamily: "Indie Flower"
+            fontSize: "22px",
+            color: "#E0D3B7",
+            fontFamily: "Indie Flower",
+            align: "center",
+            wordWrap: { width: width * 0.85 }
             }
         )
             .setOrigin(0.5)
@@ -130,15 +132,35 @@ export default class StoryChapterScene extends Phaser.Scene {
 
         this.uiCamera.ignore(this.introPrompt);
 
-        this.input.keyboard?.once("keydown-ENTER", () => {
+        // Prevent starting more than once
+        let started = false;
+
+        const beginIntro = () => {
+            if (started) return;
+            started = true;
+
+            // Remove both event listeners
+            this.input.keyboard?.off("keydown-ENTER", beginIntro);
+            this.input.off("pointerdown", beginIntro);
+
+            // Play click sound
             if (this.cache.audio.exists("sfx_click")) {
-                this.sound.play("sfx_click", { volume: 0.6 });
+            this.sound.play("sfx_click", { volume: 0.6 });
             }
 
+            // Remove prompt
             this.introPrompt?.destroy();
+
+            // Zoom into the planet
             this.zoomIntoPlanet();
-        });
-    }
+        };
+
+        // Press Enter to begin
+        this.input.keyboard?.on("keydown-ENTER", beginIntro);
+
+        // Click or tap anywhere to begin
+        this.input.on("pointerdown", beginIntro);
+        }
 
     private zoomIntoPlanet() {
         if (!this.planetImage) {

@@ -8,6 +8,8 @@ It's 3 a.m. in **Davis Hall at UB**, deep into a hackathon. A small boy with gol
 
 **Play Game:** [The Little Prince Simulator](https://little-prince-simulator.vercel.app/) 
 
+*Note: The app is only for desktop.*
+
 
 https://github.com/user-attachments/assets/d2ec4d5f-80f9-4969-a255-53028effd292
 

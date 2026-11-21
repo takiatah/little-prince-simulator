@@ -77,7 +77,7 @@ export default class BackendLoadingScene extends Phaser.Scene {
       if (this.cancelled) return;
 
       status.setText(
-        `Connecting to mission control...\nAttempt ${attempt} of 20`
+        `Connecting to mission control...\nAttempt ${attempt} of 20\n(this app is only for desktop)`
       );
 
       if (attempt > 1) {

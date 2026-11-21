@@ -143,29 +143,41 @@ export default class Menu extends Phaser.Scene {
       });
     });
 
-    // Start journey
-    startButton.on("pointerdown", () => {
-      // Click sound
-      if (this.cache.audio.exists("sfx_click")) {
-        this.sound.play("sfx_click", {
-          volume: 0.6
-        });
-      }
+  // Start journey with mouse or Enter
+  let started = false;
 
-      // Background music: play once and loop
-      if (
-        this.cache.audio.exists("music_bg") &&
-        !this.sound.get("music_bg")?.isPlaying
-      ) {
-        this.sound.play("music_bg", {
-          loop: true,
-          volume: 0.35
-        });
-      }
+  const startJourney = () => {
+    // Prevent starting multiple times
+    if (started) return;
+    started = true;
 
-      // Show backend loading screen
-      this.scene.start("BackendLoadingScene");
-    });
+    // Click sound
+    if (this.cache.audio.exists("sfx_click")) {
+      this.sound.play("sfx_click", {
+        volume: 0.6
+      });
+    }
+
+    // Background music: play once and loop
+    if (
+      this.cache.audio.exists("music_bg") &&
+      !this.sound.get("music_bg")?.isPlaying
+    ) {
+      this.sound.play("music_bg", {
+        loop: true,
+        volume: 0.35
+      });
+    }
+
+    // Show backend loading screen
+    this.scene.start("BackendLoadingScene");
+  };
+
+  // Mouse click
+  startButton.on("pointerdown", startJourney);
+
+  // Press Enter to start
+  this.input.keyboard?.once("keydown-ENTER", startJourney);
 
     // Press M to mute/unmute
     this.input.keyboard?.on("keydown-M", () => {
