@@ -1482,3 +1482,7 @@ def get_trajectory_progress(
                 "cached": False
             }
         )
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}

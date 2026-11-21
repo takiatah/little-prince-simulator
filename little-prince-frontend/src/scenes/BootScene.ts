@@ -46,14 +46,6 @@ export default class BootScene extends Phaser.Scene {
         "rocket",
         "/assets/Objects/Rocket.png"
     );
-    this.load.spritesheet(
-    "girl",
-    "/assets/characters/girl.png",
-    {
-        frameWidth: 200/4, 
-        frameHeight: 280/4 
-    }
-    );
     this.load.image(
     "laptop",
     "/assets/Objects/laptop.png"
@@ -95,6 +87,6 @@ export default class BootScene extends Phaser.Scene {
   }
 
   create() {
-    this.scene.start("MenuScene");
+    this.scene.start("BackendLoadingScene");
   }
 }
