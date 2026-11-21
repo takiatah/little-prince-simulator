@@ -1,6 +1,9 @@
 import Phaser from "phaser";
 
 export default class BootScene extends Phaser.Scene {
+  private readonly API_URL =
+    import.meta.env.VITE_API_URL || "http://localhost:8000";
+
   constructor() {
     super("BootScene");
   }
@@ -86,7 +89,26 @@ export default class BootScene extends Phaser.Scene {
     );
   }
 
+
   create() {
-    this.scene.start("BackendLoadingScene");
+    // Start waking up Render in the background
+    void this.wakeBackend();
+
+    // Immediately show the menu
+    this.scene.start("MenuScene");
+  }
+
+  private async wakeBackend() {
+    try {
+      const response = await fetch(`${this.API_URL}/health`);
+
+      if (response.ok) {
+        console.log("Backend is ready!");
+      } else {
+        console.warn("Backend returned:", response.status);
+      }
+    } catch (error) {
+      console.warn("Backend wake-up failed:", error);
+    }
   }
 }

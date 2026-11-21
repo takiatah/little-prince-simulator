@@ -31,7 +31,7 @@ const config: Phaser.Types.Core.GameConfig = {
   },
 };
 
-// Create Phaser game.
+// Create Phaser game
 const game = new Phaser.Game(config);
 
 // -----------------------------
@@ -39,7 +39,6 @@ const game = new Phaser.Game(config);
 // -----------------------------
 
 const soundButton = document.createElement("button");
-soundButton.title = "Mute / unmute";
 
 Object.assign(soundButton.style, {
   position: "fixed",
@@ -57,25 +56,41 @@ Object.assign(soundButton.style, {
   cursor: "pointer",
 });
 
-const updateIcon = () => {
-  const isMuted = game.sound.mute;
+// Track the player's mute preference separately
+let isMuted = false;
 
+const updateIcon = () => {
   soundButton.textContent = isMuted ? "🔇" : "🔊";
   soundButton.title = isMuted ? "Unmute sound" : "Mute sound";
+  soundButton.setAttribute(
+    "aria-label",
+    isMuted ? "Unmute sound" : "Mute sound"
+  );
 };
+
+// The button works immediately, even before music starts
+soundButton.addEventListener("click", () => {
+  isMuted = !isMuted;
+
+  // Apply the preference to Phaser
+  if (game.sound) {
+    game.sound.setMute(isMuted);
+  }
+
+  updateIcon();
+
+  console.log("Requested mute state:", isMuted);
+  console.log("Phaser mute state:", game.sound?.mute);
+});
+
+// Apply the initial preference when Phaser is ready
+game.events.once(Phaser.Core.Events.READY, () => {
+  game.sound.setMute(isMuted);
+  updateIcon();
+});
 
 soundButton.addEventListener("mousedown", (event) => {
   event.preventDefault();
-});
-
-soundButton.addEventListener("click", () => {
-  game.sound.mute = !game.sound.mute;
-  updateIcon();
-});
-
-game.events.once("ready", () => {
-  game.sound.on("mute", updateIcon);
-  updateIcon();
 });
 
 updateIcon();

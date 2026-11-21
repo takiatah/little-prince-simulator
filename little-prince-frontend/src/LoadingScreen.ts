@@ -99,7 +99,7 @@ export default class BackendLoadingScene extends Phaser.Scene {
           console.log("Backend connected!");
 
           if (!this.cancelled) {
-            this.scene.start("MenuScene");
+            this.scene.start("DavisScene");
           }
 
           return;
