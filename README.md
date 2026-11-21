@@ -6,6 +6,8 @@ It's 3 a.m. in **Davis Hall at UB**, deep into a hackathon. A small boy with gol
 
 > Inspired by Antoine de Saint-Exupéry's *The Little Prince*. All dialogue in this game is our own original writing.
 
+**Play Game:** [The Little Prince Simulator](https://little-prince-simulator.vercel.app/) 
+
 
 https://github.com/user-attachments/assets/d2ec4d5f-80f9-4969-a255-53028effd292
 
