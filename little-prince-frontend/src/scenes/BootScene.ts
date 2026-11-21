@@ -36,7 +36,7 @@ export default class BootScene extends Phaser.Scene {
     );
     this.load.image(
         "rose",
-        "/assets/objects/RoseOUTLINED.png"
+        "/assets/Objects/RoseOUTLINED.png"
     );
     this.load.image(
         "planetBusinessman",
@@ -44,7 +44,7 @@ export default class BootScene extends Phaser.Scene {
     );
     this.load.image(
         "rocket",
-        "/assets/objects/Rocket.png"
+        "/assets/Objects/Rocket.png"
     );
     this.load.spritesheet(
     "girl",
@@ -56,7 +56,7 @@ export default class BootScene extends Phaser.Scene {
     );
     this.load.image(
     "laptop",
-    "/assets/objects/laptop.png"
+    "/assets/Objects/laptop.png"
     );
     this.load.spritesheet(
     "businessman",
@@ -68,7 +68,7 @@ export default class BootScene extends Phaser.Scene {
     );
     this.load.image(
     "castle",
-    "/assets/objects/castle.png"
+    "/assets/Objects/castle.png"
     );
     this.load.audio("sfx_click", "/assets/audio/click.mp3"
     );
@@ -78,11 +78,11 @@ export default class BootScene extends Phaser.Scene {
     );
     this.load.image(
     "davisHall",
-    "/assets/objects/davis-hall.png"
+    "/assets/Objects/davis-hall.png"
     );
     this.load.image(
     "wateringCan",
-    "/assets/objects/watering-can.png"
+    "/assets/Objects/watering-can.png"
     );
 
     this.load.audio("music_bg", "/assets/audio/background.mp3"
@@ -90,7 +90,7 @@ export default class BootScene extends Phaser.Scene {
 
     this.load.image(
     "desk",
-    "/assets/objects/desk_1.png"
+    "/assets/Objects/desk_1.png"
     );
   }
 
